@@ -27,25 +27,38 @@ namespace EFC_Core
             return true;
         }
 
-        public bool GetSensorValues(out Models.SensorValues sensorValues)
+        public bool GetSensorValues(out List<Models.SensorValue> sensorValues)
         {
 
-            sensorValues = new Models.SensorValues()
-            {
-                ThermalSensor1 = (200 + rnd.Next(0, 200))/10.0f,
-                ThermalSensor2 = (200 + rnd.Next(0, 200)) / 10.0f,
-                AmbientThermalSensor = (200 + rnd.Next(0, 20)) / 10.0f,
-                HumiditySensor = (300 + rnd.Next(0, 300)) / 10.0f,
-                ExternalFanSpeed = 255,
-                VoltageIn = (118 + rnd.Next(0, 4)) / 10.0f,
-                CurrentIn = 0
-            };
+
+            sensorValues = new List<Models.SensorValue>();
+
+            sensorValues.Add(new Models.SensorValue("TS1", "Thermistor 1", Models.SensorType.Temperature, (200 + rnd.Next(0, 200)) / 10.0f));
+            sensorValues.Add(new Models.SensorValue("TS2", "Thermistor 2", Models.SensorType.Temperature, (200 + rnd.Next(0, 200)) / 10.0f));
+            sensorValues.Add(new Models.SensorValue("Tamb", "Ambient Temperature", Models.SensorType.Temperature, (200 + rnd.Next(0, 20)) / 10.0f));
+            sensorValues.Add(new Models.SensorValue("Hum", "Humidity", Models.SensorType.Temperature, (300 + rnd.Next(0, 300)) / 10.0f));
+            sensorValues.Add(new Models.SensorValue("FEXT", "External Fan Duty", Models.SensorType.Duty, 255));
+            
+            int sim_voltage = 118 + rnd.Next(0, 4);
+
+            sensorValues.Add(new Models.SensorValue("Vin", "Fan Voltage", Models.SensorType.Voltage, (sim_voltage) / 10.0f));
+
+            int sim_current = rnd.Next(0, 2);
 
             for (int fanId = 0; fanId < EFC_Def.FAN_NUM; fanId++)
             {
-                sensorValues.CurrentIn += fan_duties[fanId] / 10;
-                sensorValues.FanSpeed[fanId] = fan_duties[fanId]*30 - 60 + rnd.Next(0,2)*60;
+                sim_current += fan_duties[fanId]/10;
             }
+
+            sensorValues.Add(new Models.SensorValue("Iin", "Fan Current", Models.SensorType.Current, sim_current / 10.0f));
+            sensorValues.Add(new Models.SensorValue("Pin", "Fan Power", Models.SensorType.Power, (sim_voltage * sim_current) / 100.0f));
+
+            for (int fanId = 0; fanId < EFC_Def.FAN_NUM; fanId++)
+            {
+                int sim_duty = fan_duties[fanId] * 30 + rnd.Next(0, 2) * 60;
+                sensorValues.Add(new Models.SensorValue($"Fan{fanId + 1}", $"Fan Speed {fanId + 1}", Models.SensorType.Revolutions, sim_duty));
+            }
+
             return true;
         }
 
@@ -53,6 +66,13 @@ namespace EFC_Core
         {
             if(fanId < EFC_Def.FAN_NUM)
             {
+                if(fanDuty > 100)
+                {
+                    fanDuty = 100;
+                } else if(fanDuty < 0)
+                {
+                    fanDuty = 0;
+                }
                 fan_duties[fanId] = (byte)fanDuty;
                 return true;
             }

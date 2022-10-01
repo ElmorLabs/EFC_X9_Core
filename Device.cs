@@ -99,7 +99,7 @@ public class Device : IDevice
 
     #region Functionality
 
-    public bool GetSensorValues(out Models.SensorValues sensorValues)
+    public bool GetSensorValues(out List<Models.SensorValue> sensorValues)
     {
         byte[] txBuffer = Enums.UART_CMD.UART_CMD_READ_SENSOR_VALUES.ToByteArray();
         SendCommand(txBuffer, out byte[] rxBuffer, 32);
@@ -121,20 +121,20 @@ public class Device : IDevice
             Marshal.FreeHGlobal(ptr);
         }
 
-        sensorValues = new Models.SensorValues()
-        {
-            ThermalSensor1 = sensorStruct.Ts[0] / 10.0f,
-            ThermalSensor2 = sensorStruct.Ts[1] / 10.0f,
-            AmbientThermalSensor = sensorStruct.Tamb / 10.0f,
-            HumiditySensor = sensorStruct.Hum / 10.0f,
-            ExternalFanSpeed = sensorStruct.FanExt,
-            VoltageIn = sensorStruct.Vin / 10.0f,
-            CurrentIn = sensorStruct.Iin / 10.0f
-        };
+        sensorValues = new List<Models.SensorValue>();
 
-        for (int fanId = 0; fanId < 9; fanId++)
+        sensorValues.Add(new Models.SensorValue("TS1", "Thermistor 1", Models.SensorType.Temperature, sensorStruct.Ts[0] / 10.0f));
+        sensorValues.Add(new Models.SensorValue("TS2", "Thermistor 2", Models.SensorType.Temperature, sensorStruct.Ts[1] / 10.0f));
+        sensorValues.Add(new Models.SensorValue("Tamb", "Ambient Temperature", Models.SensorType.Temperature, sensorStruct.Ts[1] / 10.0f));
+        sensorValues.Add(new Models.SensorValue("Hum", "Humidity", Models.SensorType.Temperature, sensorStruct.Ts[1] / 10.0f));
+        sensorValues.Add(new Models.SensorValue("FEXT", "External fan duty", Models.SensorType.Duty, sensorStruct.FanExt));
+        sensorValues.Add(new Models.SensorValue("Vin", "Fan Voltage", Models.SensorType.Voltage, sensorStruct.Vin / 10.0f));
+        sensorValues.Add(new Models.SensorValue("Iin", "Fan Current", Models.SensorType.Current, sensorStruct.Iin / 10.0f));
+        sensorValues.Add(new Models.SensorValue("Pin", "Fan Power", Models.SensorType.Power, (sensorStruct.Vin * sensorStruct.Iin) / 100.0f));
+
+        for (int fanId = 0; fanId < EFC_Def.FAN_NUM; fanId++)
         {
-            sensorValues.FanSpeed[fanId] = sensorStruct.FanTach[fanId];
+            sensorValues.Add(new Models.SensorValue($"Fan{fanId + 1}", $"Fan Speed {fanId + 1}", Models.SensorType.Revolutions, sensorStruct.FanTach[fanId]));
         }
 
         return true;

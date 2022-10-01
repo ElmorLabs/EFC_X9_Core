@@ -20,7 +20,8 @@ public interface IDevice
 
     #region Sensors
 
-    public bool GetSensorValues(out Models.SensorValues sensorValues);
+    //public bool GetSensorValues(out Models.SensorValues sensorValues);
+    public bool GetSensorValues(out List<Models.SensorValue> sensorValues);
 
     #endregion
 
