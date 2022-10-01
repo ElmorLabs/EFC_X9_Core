@@ -1,4 +1,5 @@
 ﻿using System.IO.Ports;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace EFC_Core;
@@ -32,8 +33,8 @@ public class Device : IDevice
                 DataBits = 8,
                 StopBits = StopBits.One,
                 Handshake = Handshake.None,
-                ReadTimeout = 2000,
-                WriteTimeout = 2000,
+                ReadTimeout = 500,
+                WriteTimeout = 500,
                 RtsEnable = true,
                 DtrEnable = true
             };
@@ -103,20 +104,37 @@ public class Device : IDevice
         byte[] txBuffer = Enums.UART_CMD.UART_CMD_READ_SENSOR_VALUES.ToByteArray();
         SendCommand(txBuffer, out byte[] rxBuffer, 32);
 
+        SensorStruct sensorStruct = new SensorStruct();
+
+        int size = Marshal.SizeOf(sensorStruct);
+        IntPtr ptr = IntPtr.Zero;
+        try
+        {
+            ptr = Marshal.AllocHGlobal(size);
+
+            Marshal.Copy(txBuffer, 0, ptr, size);
+
+            sensorStruct = (SensorStruct)Marshal.PtrToStructure(ptr, typeof(SensorStruct));
+        }
+        finally
+        {
+            Marshal.FreeHGlobal(ptr);
+        }
+
         sensorValues = new Models.SensorValues()
         {
-            ThermalSensor1       = (Int16)(rxBuffer[1] << 8 | rxBuffer[0]) / 10.0f,
-            ThermalSensor2       = (Int16)(rxBuffer[3] << 8 | rxBuffer[2]) / 10.0f,
-            AmbientThermalSensor = (Int16)(rxBuffer[5] << 8 | rxBuffer[4]) / 10.0f,
-            HumiditySensor       = (Int16)(rxBuffer[7] << 8 | rxBuffer[6]) / 10.0f,
-            ExternalFanSpeed     = rxBuffer[8],
-            VoltageIn            = (UInt16)(rxBuffer[11] << 8 | rxBuffer[10]) / 100.0f,
-            CurrentIn            = (UInt16)(rxBuffer[13] << 8 | rxBuffer[12]) / 10.0f
+            ThermalSensor1 = sensorStruct.Ts[0] / 10.0f,
+            ThermalSensor2 = sensorStruct.Ts[1] / 10.0f,
+            AmbientThermalSensor = sensorStruct.Tamb / 10.0f,
+            HumiditySensor = sensorStruct.Hum / 10.0f,
+            ExternalFanSpeed = sensorStruct.FanExt,
+            VoltageIn = sensorStruct.Vin / 10.0f,
+            CurrentIn = sensorStruct.Iin / 10.0f
         };
 
         for (int fanId = 0; fanId < 9; fanId++)
         {
-            sensorValues.FanSpeed[fanId] = (UInt16)(rxBuffer[15 + fanId * 2] << 8 | rxBuffer[14 + fanId * 2]);
+            sensorValues.FanSpeed[fanId] = sensorStruct.FanTach[fanId];
         }
 
         return true;
