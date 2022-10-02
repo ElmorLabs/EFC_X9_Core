@@ -18,13 +18,13 @@ public static class Enums
     {
         UART_CMD_WELCOME,
         UART_CMD_READ_ID,
-        UART_CMD_READ_SENSORS,
+        UART_CMD_RSVD1,
         UART_CMD_READ_SENSOR_VALUES,
         UART_CMD_READ_CONFIG,
         UART_CMD_WRITE_CONFIG,
-        UART_CMD_READ_ADC,
-        UART_CMD_WRITE_CONFIG_CONT_TX,
-        UART_CMD_WRITE_CONFIG_UART,
+        UART_CMD_RSVD2,
+        UART_CMD_RSVD3,
+        UART_CMD_RSVD4,
         UART_CMD_WRITE_FAN_DUTY,
         UART_CMD_DISPLAY_SW_DISABLE = 0xE0,
         UART_CMD_DISPLAY_SW_ENABLE = 0xE1,
@@ -56,5 +56,27 @@ public static class Enums
         ERROR
     }
 
+    #endregion
+
+    #region Core
+    public enum HardwareType {
+        EFC_X9_V1
+    }
+
+    public enum SensorType {
+        Temperature,
+        Humidity,
+        Duty,
+        Revolutions,
+        Voltage,
+        Current,
+        Power
+    }
+
+    public enum DeviceConfigItemType {
+        List,
+        Integer,
+        Float
+    }
     #endregion
 }

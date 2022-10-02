@@ -9,6 +9,7 @@ namespace EFC_Core;
 public interface IDevice
 {
     public Enums.DeviceStatus Status { get; }
+    public Enums.HardwareType Type { get; }
     public int FirmwareVersion { get; }
 
     #region Connection
@@ -19,14 +20,12 @@ public interface IDevice
     #endregion
 
     #region Sensors
-
-    //public bool GetSensorValues(out Models.SensorValues sensorValues);
     public bool GetSensorValues(out List<Models.SensorValue> sensorValues);
 
     #endregion
 
     #region Controller
-
+    public bool GetConfigItems(out List<Models.DeviceConfigItem> deviceConfigItems);
     public bool SetFanDuty(int fanId, int fanDuty);
 
     #endregion
