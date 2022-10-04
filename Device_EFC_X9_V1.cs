@@ -13,8 +13,6 @@ public class Device_EFC_X9_V1 : IDevice
     public const int PRODUCT_ID = 0x0E;
     public const int FIRMWARE_VERSION = 0x01;
 
-    public const int CONFIG_VERSION = 0x00;
-
     public const int PROFILE_NUM = 2;
 
     public const int FAN_NUM = 9;
@@ -76,6 +74,41 @@ public class Device_EFC_X9_V1 : IDevice
         TEMP_SRC_TS2,
         TEMP_SRC_TAMB
     };
+
+    public enum UART_CMD : byte {
+        UART_CMD_WELCOME,
+        UART_CMD_READ_ID,
+        UART_CMD_RSVD1,
+        UART_CMD_READ_SENSOR_VALUES,
+        UART_CMD_READ_CONFIG,
+        UART_CMD_WRITE_CONFIG,
+        UART_CMD_RSVD2,
+        UART_CMD_RSVD3,
+        UART_CMD_RSVD4,
+        UART_CMD_WRITE_FAN_DUTY,
+        UART_CMD_DISPLAY_SW_DISABLE = 0xE0,
+        UART_CMD_DISPLAY_SW_ENABLE = 0xE1,
+        UART_CMD_DISPLAY_SW_WRITE = 0xE2,
+        UART_CMD_DISPLAY_SW_UPDATE = 0xE3,
+        UART_CMD_RESET = 0xF0,
+        UART_CMD_BOOTLOADER = 0xF1,
+        UART_CMD_NVM_CONFIG = 0xF2,
+        UART_CMD_NOP = 0xFF
+    }
+
+    public static byte[] ToByteArray(UART_CMD uartCMD, int len = 0) {
+        byte[] returnArray = new byte[len + 1];
+        returnArray[0] = (byte)uartCMD;
+        return returnArray;
+    }
+
+    public enum UART_NVM_CMD : byte {
+        CONFIG_SAVE,
+        CONFIG_LOAD,
+        CONFIG_RESET
+    }
+
+
     #endregion
 
     #region Variables
@@ -86,62 +119,10 @@ public class Device_EFC_X9_V1 : IDevice
 
     private static readonly List<byte> RxData = new();
     private static SerialPort? _serialPort;
-    //private List<Models.DeviceConfigItem> _deviceConfigItems;
 
     #endregion
 
     #region Public Methods
-
-    public Device_EFC_X9_V1() {
-
-        // Build local config item list
-        /*_deviceConfigItems = new List<Models.DeviceConfigItem>();
-
-        Models.DeviceConfigItem deviceConfigItem;
-
-        deviceConfigItem = new Models.DeviceConfigItem("Active Fan Profile", Enums.DeviceConfigItemType.List, 0, 0, PROFILE_NUM);
-        deviceConfigItem.DeviceConfigValues.Add(new Models.DeviceConfigValue("Profile 1", 0));
-        deviceConfigItem.DeviceConfigValues.Add(new Models.DeviceConfigValue("Profile 2", 1));
-        _deviceConfigItems.Add(deviceConfigItem);
-
-        for(int profile = 1; profile <= PROFILE_NUM; profile++) {
-            for(int fan = 1; fan <= FAN_NUM; fan++) {
-
-                deviceConfigItem = new Models.DeviceConfigItem($"Profile #{profile} Fan #{fan} Mode", Enums.DeviceConfigItemType.List, 0, 0, 2);
-                deviceConfigItem.DeviceConfigValues.Add(new Models.DeviceConfigValue("Temperature Control", 0));
-                deviceConfigItem.DeviceConfigValues.Add(new Models.DeviceConfigValue("Fixed", 1));
-                deviceConfigItem.DeviceConfigValues.Add(new Models.DeviceConfigValue("External Fan Input", 2));
-                _deviceConfigItems.Add(deviceConfigItem);
-
-                deviceConfigItem = new Models.DeviceConfigItem($"Profile #{profile} Fan #{fan} Temperature Source", Enums.DeviceConfigItemType.List, 0, 0, 3);
-                deviceConfigItem.DeviceConfigValues.Add(new Models.DeviceConfigValue("Auto", 0));
-                deviceConfigItem.DeviceConfigValues.Add(new Models.DeviceConfigValue("Thermistor 1", 1));
-                deviceConfigItem.DeviceConfigValues.Add(new Models.DeviceConfigValue("Thermistor 2", 2));
-                deviceConfigItem.DeviceConfigValues.Add(new Models.DeviceConfigValue("Ambient Temperature", 3));
-                _deviceConfigItems.Add(deviceConfigItem);
-
-                for(int point = 1; point <= FAN_CURVE_NUM_POINTS; point++) {
-                    deviceConfigItem = new Models.DeviceConfigItem($"Profile #{profile} Fan #{fan} Temperature Point {point}", Enums.DeviceConfigItemType.Float, 0, 0, 100);
-                    _deviceConfigItems.Add(deviceConfigItem);
-                    deviceConfigItem = new Models.DeviceConfigItem($"Profile #{profile} Fan #{fan} Duty Point {point}", Enums.DeviceConfigItemType.Integer, 0, 0, 100);
-                    _deviceConfigItems.Add(deviceConfigItem);
-                }
-
-                deviceConfigItem = new Models.DeviceConfigItem($"Profile #{profile} Fan #{fan} Ramp Step Size", Enums.DeviceConfigItemType.Integer, 0, 1, 63);
-                _deviceConfigItems.Add(deviceConfigItem);
-
-                deviceConfigItem = new Models.DeviceConfigItem($"Profile #{profile} Fan #{fan} Fixed Duty", Enums.DeviceConfigItemType.Integer, 0, 0, 100);
-                _deviceConfigItems.Add(deviceConfigItem);
-
-                deviceConfigItem = new Models.DeviceConfigItem($"Profile #{profile} Fan #{fan} Min Duty", Enums.DeviceConfigItemType.Integer, 0, 0, 100);
-                _deviceConfigItems.Add(deviceConfigItem);
-
-                deviceConfigItem = new Models.DeviceConfigItem($"Profile #{profile} Fan #{fan} Max Duty", Enums.DeviceConfigItemType.Integer, 0, 0, 100);
-                _deviceConfigItems.Add(deviceConfigItem);
-
-            }
-        }*/
-    }
 
     #region Connection
 
@@ -182,7 +163,7 @@ public class Device_EFC_X9_V1 : IDevice
             return false;
         }
 
-        if (Test())
+        if (CheckVendorData())
         {
             Status = Enums.DeviceStatus.CONNECTED;
             return true;
@@ -226,7 +207,7 @@ public class Device_EFC_X9_V1 : IDevice
 
     public virtual bool GetSensorValues(out List<Models.SensorValue> sensorValues)
     {
-        byte[] txBuffer = Enums.UART_CMD.UART_CMD_READ_SENSOR_VALUES.ToByteArray();
+        byte[] txBuffer = ToByteArray(UART_CMD.UART_CMD_READ_SENSOR_VALUES);
         byte[] rxBuffer;
 
         // Get values from device
@@ -237,8 +218,14 @@ public class Device_EFC_X9_V1 : IDevice
             return false;
         }
 
-        // Convert to struct
         SensorStruct sensorStruct = new SensorStruct();
+
+        // Prevent null possibility
+        sensorStruct.Ts = new short[TS_NUM];
+        sensorStruct.FanTach = new ushort[FAN_NUM];
+
+        // Convert byte array to struct
+
         int size = Marshal.SizeOf(sensorStruct);
         IntPtr ptr = IntPtr.Zero;
         try
@@ -282,7 +269,7 @@ public class Device_EFC_X9_V1 : IDevice
         // 0~100 (0x00~0x64) for duty control in percentage
         // 255 (0xFF) for MCU embedded control
 
-        byte[] txBuffer = Enums.UART_CMD.UART_CMD_WRITE_FAN_DUTY.ToByteArray(2);
+        byte[] txBuffer = ToByteArray(UART_CMD.UART_CMD_WRITE_FAN_DUTY, 2);
         txBuffer[1] = (byte)fanId;
         txBuffer[2] = (byte)fanDuty;
 
@@ -298,9 +285,10 @@ public class Device_EFC_X9_V1 : IDevice
         return true;
     }
 
+    // Get device configuration
     public virtual bool GetConfigItems(out DeviceConfigStruct deviceConfigStruct) {
 
-        byte[] txBuffer = Enums.UART_CMD.UART_CMD_READ_CONFIG.ToByteArray(0);
+        byte[] txBuffer = ToByteArray(UART_CMD.UART_CMD_READ_CONFIG);
         byte[] rxBuffer;
 
         deviceConfigStruct = new DeviceConfigStruct();
@@ -315,7 +303,7 @@ public class Device_EFC_X9_V1 : IDevice
         // Calc CRC16
         UInt16 crc16_calc = Helper.CRC16_Calc(rxBuffer, 2, rxBuffer.Length - 2);
 
-        // Convert to struct
+        // Convert byte array to struct
         int size = Marshal.SizeOf(deviceConfigStruct);
         IntPtr ptr = IntPtr.Zero;
         try {
@@ -331,79 +319,114 @@ public class Device_EFC_X9_V1 : IDevice
             Marshal.FreeHGlobal(ptr);
         }
 
-        // Check CRC TODO: fix 0 reading CRC from EFC-X9
-        /*if(crc16_calc != deviceConfigStruct.Crc) {
+        // Firmware version 01 reports Crc = 0 if not loaded from NVM
+        if(FirmwareVersion != 0x01 && crc16_calc != deviceConfigStruct.Crc) {
             return false;
-        }*/
+        }
 
         return true;
     }
 
-    /*public bool GetConfigItems(out List<Models.DeviceConfigItem> deviceConfigItems) {
+    public virtual bool SetConfigItems(DeviceConfigStruct deviceConfigStruct) {
 
-        byte[] txBuffer = Enums.UART_CMD.UART_CMD_READ_CONFIG.ToByteArray(0);
-        byte[] rxBuffer;
-
-        // Get data from device
-        try {
-            SendCommand(txBuffer, out rxBuffer, 220);
-        } catch {
-            deviceConfigItems = new List<Models.DeviceConfigItem>();
+        // Firmware version 01 write config is bugged
+        if(FirmwareVersion == 0x01) {
             return false;
         }
 
-        // Calc CRC16
-        UInt16 crc16_calc = Helper.CRC16_Calc(rxBuffer, 2, rxBuffer.Length - 2);
+        byte[] txBuffer = ToByteArray(UART_CMD.UART_CMD_WRITE_CONFIG);
 
-        // Convert to struct
-        DeviceConfigStruct deviceConfigStruct = new DeviceConfigStruct();
+        // Send initial command
+        try {
+            SendCommand(txBuffer, out _, 0);
+        } catch {
+            return false;
+        }
+
+        // Convert struct to byte array
         int size = Marshal.SizeOf(deviceConfigStruct);
+        txBuffer = new byte[size];
         IntPtr ptr = IntPtr.Zero;
         try {
             ptr = Marshal.AllocHGlobal(size);
-
-            Marshal.Copy(rxBuffer, 0, ptr, size);
-
-            object? struct_obj = Marshal.PtrToStructure(ptr, typeof(DeviceConfigStruct));
-            if(struct_obj != null) {
-                deviceConfigStruct = (DeviceConfigStruct)struct_obj;
-            }
+            Marshal.StructureToPtr(deviceConfigStruct, ptr, true);
+            Marshal.Copy(ptr, txBuffer, 0, size);
         } finally {
             Marshal.FreeHGlobal(ptr);
         }
 
-        // Check CRC
-        if(crc16_calc != deviceConfigStruct.Crc) {
-            deviceConfigItems = new List<Models.DeviceConfigItem>();
+        // Calc CRC16
+        UInt16 crc16_calc = Helper.CRC16_Calc(txBuffer, 2, txBuffer.Length - 2);
+        txBuffer[0] = (byte)crc16_calc;
+        txBuffer[1] = (byte)(crc16_calc >> 8);
+
+        // Send config data to device
+        try {
+            SendCommand(txBuffer, out _, 0);
+        } catch {
             return false;
         }
 
-        // Assign values
-        _deviceConfigItems[0].Value = deviceConfigStruct.ActiveFanProfileId;
+        return true;
+    }
 
-        int i = 1;
-        for(int profile = 1; profile <= PROFILE_NUM; profile++) {
-            for(int fan = 1; fan <= FAN_NUM; fan++) {
-                _deviceConfigItems[i++].Value = (int)deviceConfigStruct.FanProfile[profile].FanConfig[fan - 1].FanMode;
-                _deviceConfigItems[i++].Value = (int)deviceConfigStruct.FanProfile[profile].FanConfig[fan - 1].TempSource;
+    public virtual bool SaveConfig() {
+        return SendNvmCommand(UART_NVM_CMD.CONFIG_SAVE);
+    }
+    public virtual bool LoadConfig() {
+        return SendNvmCommand(UART_NVM_CMD.CONFIG_LOAD);
+    }
+    public virtual bool ResetConfig() {
+        return SendNvmCommand(UART_NVM_CMD.CONFIG_RESET);
+    }
 
-                for(int point = 1; point <= FAN_CURVE_NUM_POINTS; point++) {
-                    _deviceConfigItems[i++].Value = (int)deviceConfigStruct.FanProfile[profile].FanConfig[fan - 1].Temp[point - 1];
-                    _deviceConfigItems[i++].Value = (int)deviceConfigStruct.FanProfile[profile].FanConfig[fan - 1].Duty[point - 1];
-                }
+    public virtual bool SetOledSoftwareControl(bool enable) {
 
-                _deviceConfigItems[i++].Value = (int)deviceConfigStruct.FanProfile[profile].FanConfig[fan - 1].RampStep;
-                _deviceConfigItems[i++].Value = (int)deviceConfigStruct.FanProfile[profile].FanConfig[fan - 1].FixedDuty;
-                _deviceConfigItems[i++].Value = (int)deviceConfigStruct.FanProfile[profile].FanConfig[fan - 1].MinDuty;
-                _deviceConfigItems[i++].Value = (int)deviceConfigStruct.FanProfile[profile].FanConfig[fan - 1].MaxDuty;
+        byte[] txBuffer = ToByteArray(enable ? UART_CMD.UART_CMD_DISPLAY_SW_ENABLE : UART_CMD.UART_CMD_DISPLAY_SW_DISABLE);
 
-            }
+        // Send command to device
+        try {
+            SendCommand(txBuffer, out _, 0);
+        } catch {
+            return false;
         }
 
-        deviceConfigItems = _deviceConfigItems;
+        return true;
+
+    }
+
+    public virtual bool SendOledFramebuffer(byte[] frameBuffer) {
+
+        if(frameBuffer.Length != 128*64/8) {
+            return false;
+        }
+
+        // Send write framebuffer command to device
+        byte[] txBuffer = ToByteArray(UART_CMD.UART_CMD_DISPLAY_SW_WRITE);
+        try {
+            SendCommand(txBuffer, out _, 0);
+        } catch {
+            return false;
+        }
+
+        // Send framebuffer
+        try {
+            SendCommand(frameBuffer, out _, 0);
+        } catch {
+            return false;
+        }
+
+        // Send framebuffer update command
+        txBuffer = ToByteArray(UART_CMD.UART_CMD_DISPLAY_SW_UPDATE);
+        try {
+            SendCommand(txBuffer, out _, 0);
+        } catch {
+            return false;
+        }
 
         return true;
-    }*/
+
+    }
 
     #endregion
 
@@ -411,9 +434,10 @@ public class Device_EFC_X9_V1 : IDevice
 
     #region Private Methods
 
-    private bool Test()
+    // Compare device id and store firmware version
+    private bool CheckVendorData()
     {
-        byte[] txBuffer = Enums.UART_CMD.UART_CMD_READ_ID.ToByteArray();
+        byte[] txBuffer = ToByteArray(UART_CMD.UART_CMD_READ_ID);
         SendCommand(txBuffer, out byte[] rxBuffer, 3);
 
         if (rxBuffer[0] != 0xEE || rxBuffer[1] != 0x0E) return false;
@@ -422,6 +446,7 @@ public class Device_EFC_X9_V1 : IDevice
         return true;
     }
 
+    // Data reception event
     private void SerialPortOnDataReceived(object sender, SerialDataReceivedEventArgs e)
     {
         SerialPort serialPort = (SerialPort)sender;
@@ -430,6 +455,7 @@ public class Device_EFC_X9_V1 : IDevice
         RxData.AddRange(data.ToList());
     }
 
+    // Send command to EFC-X9
     private bool SendCommand(byte[] txBuffer, out byte[] rxBuffer, int rxLen)
     {
         rxBuffer = new byte[rxLen];
@@ -460,6 +486,26 @@ public class Device_EFC_X9_V1 : IDevice
         }
 
         return true;
+    }
+
+    private bool SendNvmCommand(UART_NVM_CMD cmd) {
+
+        byte[] txBuffer = ToByteArray(UART_CMD.UART_CMD_NVM_CONFIG, 3);
+
+        // Write key
+        txBuffer[1] = 0x34;
+        txBuffer[2] = 0x12;
+        txBuffer[3] = (byte)cmd;
+
+        // Send command
+        try {
+            SendCommand(txBuffer, out _, 0);
+        } catch {
+            return false;
+        }
+
+        return true;
+
     }
 
     #endregion

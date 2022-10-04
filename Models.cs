@@ -57,32 +57,4 @@ public static class Models
         }
     }
 
-    public class DeviceConfigValue {
-        public string Description { get; set; }
-        public int Value { get; set; }
-        public DeviceConfigValue(string desc, int val) {
-            Description = desc;
-            Value = val;
-        }
-    }
-
-    public class DeviceConfigItem {
-        public string Description { get; set; }
-        public Enums.DeviceConfigItemType Type { get; set; }
-        public int Value;
-        public int MinValue;
-        public int MaxValue;
-
-        public List<DeviceConfigValue> DeviceConfigValues = new List<DeviceConfigValue>();
-
-        public DeviceConfigItem(string desc, Enums.DeviceConfigItemType type, int val, int min_val, int max_val) {
-            Description = desc;
-            Type = type;
-            Value = val;
-            MinValue = min_val;
-            MaxValue = max_val;
-        }
-
-    }
-
 }

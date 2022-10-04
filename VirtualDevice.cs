@@ -54,53 +54,6 @@ namespace EFC_Core
                 }
             }
 
-            // Build local config item list
-            /*_deviceConfigItems = new List<Models.DeviceConfigItem>();
-
-            Models.DeviceConfigItem deviceConfigItem;
-
-            deviceConfigItem = new Models.DeviceConfigItem("Active Fan Profile", Enums.DeviceConfigItemType.List, 0, 0, Device_EFC_X9_V1.PROFILE_NUM);
-            deviceConfigItem.DeviceConfigValues.Add(new Models.DeviceConfigValue("Profile 1", 0));
-            deviceConfigItem.DeviceConfigValues.Add(new Models.DeviceConfigValue("Profile 2", 1));
-            _deviceConfigItems.Add(deviceConfigItem);
-
-            for(int profile = 1; profile <= Device_EFC_X9_V1.PROFILE_NUM; profile++) {
-                for(int fan = 1; fan <= Device_EFC_X9_V1.FAN_NUM; fan++) {
-
-                    deviceConfigItem = new Models.DeviceConfigItem($"Profile #{profile} Fan #{fan} Mode", Enums.DeviceConfigItemType.List, 0, 0, 2);
-                    deviceConfigItem.DeviceConfigValues.Add(new Models.DeviceConfigValue("Temperature Control", 0));
-                    deviceConfigItem.DeviceConfigValues.Add(new Models.DeviceConfigValue("Fixed", 1));
-                    deviceConfigItem.DeviceConfigValues.Add(new Models.DeviceConfigValue("External Fan Input", 2));
-                    _deviceConfigItems.Add(deviceConfigItem);
-
-                    deviceConfigItem = new Models.DeviceConfigItem($"Profile #{profile} Fan #{fan} Temperature Source", Enums.DeviceConfigItemType.List, 0, 0, 3);
-                    deviceConfigItem.DeviceConfigValues.Add(new Models.DeviceConfigValue("Auto", 0));
-                    deviceConfigItem.DeviceConfigValues.Add(new Models.DeviceConfigValue("Thermistor 1", 1));
-                    deviceConfigItem.DeviceConfigValues.Add(new Models.DeviceConfigValue("Thermistor 2", 2));
-                    deviceConfigItem.DeviceConfigValues.Add(new Models.DeviceConfigValue("Ambient Temperature", 3));
-                    _deviceConfigItems.Add(deviceConfigItem);
-
-                    for(int point = 1; point <= Device_EFC_X9_V1.FAN_CURVE_NUM_POINTS; point++) {
-                        deviceConfigItem = new Models.DeviceConfigItem($"Profile #{profile} Fan #{fan} Temperature Point {point}", Enums.DeviceConfigItemType.Float, 0, 0, 100);
-                        _deviceConfigItems.Add(deviceConfigItem);
-                        deviceConfigItem = new Models.DeviceConfigItem($"Profile #{profile} Fan #{fan} Duty Point {point}", Enums.DeviceConfigItemType.Integer, 0, 0, 100);
-                        _deviceConfigItems.Add(deviceConfigItem);
-                    }
-
-                    deviceConfigItem = new Models.DeviceConfigItem($"Profile #{profile} Fan #{fan} Ramp Step Size", Enums.DeviceConfigItemType.Integer, 0, 1, 63);
-                    _deviceConfigItems.Add(deviceConfigItem);
-
-                    deviceConfigItem = new Models.DeviceConfigItem($"Profile #{profile} Fan #{fan} Fixed Duty", Enums.DeviceConfigItemType.Integer, 0, 0, 100);
-                    _deviceConfigItems.Add(deviceConfigItem);
-
-                    deviceConfigItem = new Models.DeviceConfigItem($"Profile #{profile} Fan #{fan} Min Duty", Enums.DeviceConfigItemType.Integer, 0, 0, 100);
-                    _deviceConfigItems.Add(deviceConfigItem);
-
-                    deviceConfigItem = new Models.DeviceConfigItem($"Profile #{profile} Fan #{fan} Max Duty", Enums.DeviceConfigItemType.Integer, 0, 0, 100);
-                    _deviceConfigItems.Add(deviceConfigItem);
-
-                }
-            }*/
         }
 
         public override bool Connect(string comPort)
@@ -153,11 +106,6 @@ namespace EFC_Core
             deviceConfigStruct = _deviceConfigStruct;
             return true;
         }
-
-        /*public bool GetConfigItems(out List<Models.DeviceConfigItem> deviceConfigItems) {
-            deviceConfigItems = _deviceConfigItems;
-            return true;
-        }*/
 
         public override bool SetFanDuty(int fanId, int fanDuty)
         {
