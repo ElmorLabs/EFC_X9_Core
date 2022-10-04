@@ -21,11 +21,10 @@ public interface IDevice
 
     #region Sensors
     public bool GetSensorValues(out List<Models.SensorValue> sensorValues);
-
     #endregion
 
     #region Controller
-    public bool GetConfigItems(out List<Models.DeviceConfigItem> deviceConfigItems);
+    //public bool GetConfigItems(out List<Models.DeviceConfigItem> deviceConfigItems);
     public bool SetFanDuty(int fanId, int fanDuty);
 
     #endregion

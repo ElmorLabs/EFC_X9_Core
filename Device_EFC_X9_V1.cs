@@ -2,6 +2,7 @@
 using System.IO.Ports;
 using System.Runtime.InteropServices;
 using System.Text;
+using static EFC_Core.Models;
 
 namespace EFC_Core;
 
@@ -86,7 +87,7 @@ public class Device_EFC_X9_V1 : IDevice
 
     private static readonly List<byte> RxData = new();
     private static SerialPort? _serialPort;
-    private List<Models.DeviceConfigItem> _deviceConfigItems;
+    //private List<Models.DeviceConfigItem> _deviceConfigItems;
 
     #endregion
 
@@ -95,7 +96,7 @@ public class Device_EFC_X9_V1 : IDevice
     public Device_EFC_X9_V1() {
 
         // Build local config item list
-        _deviceConfigItems = new List<Models.DeviceConfigItem>();
+        /*_deviceConfigItems = new List<Models.DeviceConfigItem>();
 
         Models.DeviceConfigItem deviceConfigItem;
 
@@ -140,12 +141,12 @@ public class Device_EFC_X9_V1 : IDevice
                 _deviceConfigItems.Add(deviceConfigItem);
 
             }
-        }
+        }*/
     }
 
     #region Connection
 
-    public bool Connect(string comPort = "COM34")
+    public virtual bool Connect(string comPort = "COM34")
     {
         Status = Enums.DeviceStatus.CONNECTING;
 
@@ -194,7 +195,7 @@ public class Device_EFC_X9_V1 : IDevice
         }
     }
 
-    public bool Disconnect()
+    public virtual bool Disconnect()
     {
         Status = Enums.DeviceStatus.DISCONNECTING;
 
@@ -224,7 +225,7 @@ public class Device_EFC_X9_V1 : IDevice
 
     #region Functionality
 
-    public bool GetSensorValues(out List<Models.SensorValue> sensorValues)
+    public virtual bool GetSensorValues(out List<Models.SensorValue> sensorValues)
     {
         byte[] txBuffer = Enums.UART_CMD.UART_CMD_READ_SENSOR_VALUES.ToByteArray();
         byte[] rxBuffer;
@@ -276,7 +277,7 @@ public class Device_EFC_X9_V1 : IDevice
         return true;
     }
 
-    public bool SetFanDuty(int fanId, int fanDuty)
+    public virtual bool SetFanDuty(int fanId, int fanDuty)
     {
         // Duty - txBuffer[2]
         // 0~100 (0x00~0x64) for duty control in percentage
@@ -298,7 +299,48 @@ public class Device_EFC_X9_V1 : IDevice
         return true;
     }
 
-    public bool GetConfigItems(out List<Models.DeviceConfigItem> deviceConfigItems) {
+    public virtual bool GetConfigItems(out DeviceConfigStruct deviceConfigStruct) {
+
+        byte[] txBuffer = Enums.UART_CMD.UART_CMD_READ_CONFIG.ToByteArray(0);
+        byte[] rxBuffer;
+
+        deviceConfigStruct = new DeviceConfigStruct();
+
+        // Get data from device
+        try {
+            SendCommand(txBuffer, out rxBuffer, 220);
+        } catch {
+            return false;
+        }
+
+        // Calc CRC16
+        UInt16 crc16_calc = Helper.CRC16_Calc(rxBuffer, 2, rxBuffer.Length - 2);
+
+        // Convert to struct
+        int size = Marshal.SizeOf(deviceConfigStruct);
+        IntPtr ptr = IntPtr.Zero;
+        try {
+            ptr = Marshal.AllocHGlobal(size);
+
+            Marshal.Copy(rxBuffer, 0, ptr, size);
+
+            object? struct_obj = Marshal.PtrToStructure(ptr, typeof(DeviceConfigStruct));
+            if(struct_obj != null) {
+                deviceConfigStruct = (DeviceConfigStruct)struct_obj;
+            }
+        } finally {
+            Marshal.FreeHGlobal(ptr);
+        }
+
+        // Check CRC
+        if(crc16_calc != deviceConfigStruct.Crc) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /*public bool GetConfigItems(out List<Models.DeviceConfigItem> deviceConfigItems) {
 
         byte[] txBuffer = Enums.UART_CMD.UART_CMD_READ_CONFIG.ToByteArray(0);
         byte[] rxBuffer;
@@ -362,7 +404,7 @@ public class Device_EFC_X9_V1 : IDevice
         deviceConfigItems = _deviceConfigItems;
 
         return true;
-    }
+    }*/
 
     #endregion
 

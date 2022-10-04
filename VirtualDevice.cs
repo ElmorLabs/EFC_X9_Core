@@ -4,24 +4,58 @@ using System.IO.Ports;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using static EFC_Core.Device_EFC_X9_V1;
+using static EFC_Core.Models;
 
 namespace EFC_Core
 {
-    public class VirtualDevice : IDevice
+    public class VirtualDevice : Device_EFC_X9_V1
     {
-        public Enums.DeviceStatus Status { get; private set; } = Enums.DeviceStatus.DISCONNECTED;
-        public Enums.HardwareType Type { get; private set; } = Enums.HardwareType.EFC_X9_V1;
-        public int FirmwareVersion { get; private set; } = 0;
+        public new Enums.DeviceStatus Status { get; private set; } = Enums.DeviceStatus.DISCONNECTED;
+        public new Enums.HardwareType Type { get; private set; } = Enums.HardwareType.EFC_X9_V1;
+        public new int FirmwareVersion { get; private set; } = 0;
 
         Random rnd = new Random();
         byte[] fan_duties = new byte[Device_EFC_X9_V1.FAN_NUM];
 
-        private List<Models.DeviceConfigItem> _deviceConfigItems;
+        private DeviceConfigStruct _deviceConfigStruct;
+        //private List<Models.DeviceConfigItem> _deviceConfigItems;
 
         public VirtualDevice() {
 
+            _deviceConfigStruct = new DeviceConfigStruct();
+            _deviceConfigStruct.FanProfile = new ProfileConfigStruct[Device_EFC_X9_V1.PROFILE_NUM];
+
+            for(int profile = 0; profile < Device_EFC_X9_V1.PROFILE_NUM; profile++) {
+
+                _deviceConfigStruct.FanProfile[profile].FanConfig = new FanConfigStruct[Device_EFC_X9_V1.FAN_NUM];
+
+                for(int fan = 0; fan < Device_EFC_X9_V1.FAN_NUM; fan++) {
+
+                    _deviceConfigStruct.FanProfile[profile].FanConfig[fan].Temp = new short[Device_EFC_X9_V1.FAN_CURVE_NUM_POINTS];
+                    _deviceConfigStruct.FanProfile[profile].FanConfig[fan].Duty = new byte[Device_EFC_X9_V1.FAN_CURVE_NUM_POINTS];
+
+                    _deviceConfigStruct.FanProfile[profile].FanConfig[fan].FanMode = FAN_MODE.FAN_MODE_TEMP_CONTROL;
+                    _deviceConfigStruct.FanProfile[profile].FanConfig[fan].RampStep = 2;
+                    _deviceConfigStruct.FanProfile[profile].FanConfig[fan].Temp[0] = 250;
+                    _deviceConfigStruct.FanProfile[profile].FanConfig[fan].Duty[0] = 20;
+                    _deviceConfigStruct.FanProfile[profile].FanConfig[fan].Temp[1] = 400;
+                    _deviceConfigStruct.FanProfile[profile].FanConfig[fan].Duty[1] = 100;
+
+                    _deviceConfigStruct.FanProfile[profile].FanConfig[fan].FixedDuty = 50;
+                    _deviceConfigStruct.FanProfile[profile].FanConfig[fan].MinDuty = 20;
+                    _deviceConfigStruct.FanProfile[profile].FanConfig[fan].MaxDuty = 100;
+
+                    if(profile == 1) {
+                        _deviceConfigStruct.FanProfile[profile].FanConfig[fan].FanMode = FAN_MODE.FAN_MODE_FIXED;
+                        _deviceConfigStruct.FanProfile[profile].FanConfig[fan].FixedDuty = 100;
+                    }
+
+                }
+            }
+
             // Build local config item list
-            _deviceConfigItems = new List<Models.DeviceConfigItem>();
+            /*_deviceConfigItems = new List<Models.DeviceConfigItem>();
 
             Models.DeviceConfigItem deviceConfigItem;
 
@@ -66,22 +100,22 @@ namespace EFC_Core
                     _deviceConfigItems.Add(deviceConfigItem);
 
                 }
-            }
+            }*/
         }
 
-        public bool Connect(string comPort)
+        public override bool Connect(string comPort)
         {
             Status = Enums.DeviceStatus.CONNECTED;
             return true;
         }
 
-        public bool Disconnect()
+        public override bool Disconnect()
         {
             Status = Enums.DeviceStatus.DISCONNECTED;
             return true;
         }
 
-        public bool GetSensorValues(out List<Models.SensorValue> sensorValues)
+        public override bool GetSensorValues(out List<Models.SensorValue> sensorValues)
         {
 
             sensorValues = new List<Models.SensorValue>();
@@ -115,12 +149,17 @@ namespace EFC_Core
             return true;
         }
 
-        public bool GetConfigItems(out List<Models.DeviceConfigItem> deviceConfigItems) {
-            deviceConfigItems = _deviceConfigItems;
+        public override bool GetConfigItems(out DeviceConfigStruct deviceConfigStruct) {
+            deviceConfigStruct = _deviceConfigStruct;
             return true;
         }
 
-        public bool SetFanDuty(int fanId, int fanDuty)
+        /*public bool GetConfigItems(out List<Models.DeviceConfigItem> deviceConfigItems) {
+            deviceConfigItems = _deviceConfigItems;
+            return true;
+        }*/
+
+        public override bool SetFanDuty(int fanId, int fanDuty)
         {
             if(fanId < Device_EFC_X9_V1.FAN_NUM)
             {
