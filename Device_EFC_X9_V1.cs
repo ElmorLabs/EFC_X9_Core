@@ -40,7 +40,6 @@ public class Device_EFC_X9_V1 : IDevice
         [MarshalAs(UnmanagedType.ByValArray, SizeConst = FAN_NUM)] public UInt16[] FanTach;
     };
 
-
     public struct FanConfigStruct {
         public FAN_MODE FanMode;
         public TEMP_SRC TempSource;
@@ -65,13 +64,13 @@ public class Device_EFC_X9_V1 : IDevice
 
     #region Device-specific Enums
 
-    public enum FAN_MODE {
+    public enum FAN_MODE : byte {
         FAN_MODE_TEMP_CONTROL,
         FAN_MODE_FIXED,
         FAN_MODE_EXT
     };
 
-    public enum TEMP_SRC {
+    public enum TEMP_SRC : byte {
         TEMP_SRC_AUTO,
         TEMP_SRC_TS1,
         TEMP_SRC_TS2,
@@ -332,10 +331,10 @@ public class Device_EFC_X9_V1 : IDevice
             Marshal.FreeHGlobal(ptr);
         }
 
-        // Check CRC
-        if(crc16_calc != deviceConfigStruct.Crc) {
+        // Check CRC TODO: fix 0 reading CRC from EFC-X9
+        /*if(crc16_calc != deviceConfigStruct.Crc) {
             return false;
-        }
+        }*/
 
         return true;
     }
