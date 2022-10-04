@@ -28,7 +28,7 @@ public class Device_EFC_X9_V1 : IDevice
         public byte FwVersion;
     };
 
-    public struct SensorStruct {
+    public struct SensorStruct_V1 {
         [MarshalAs(UnmanagedType.ByValArray, SizeConst = TS_NUM)] public Int16[] Ts;
         public Int16 Tamb;
         public Int16 Hum;
@@ -36,6 +36,17 @@ public class Device_EFC_X9_V1 : IDevice
         public UInt16 Vin;
         public UInt16 Iin;
         [MarshalAs(UnmanagedType.ByValArray, SizeConst = FAN_NUM)] public UInt16[] FanTach;
+    };
+
+    public struct SensorStruct_V2 {
+        [MarshalAs(UnmanagedType.ByValArray, SizeConst = TS_NUM)] public Int16[] Ts;
+        public Int16 Tamb;
+        public Int16 Hum;
+        public byte FanExt;
+        public UInt16 Vin;
+        public UInt16 Iin;
+        [MarshalAs(UnmanagedType.ByValArray, SizeConst = FAN_NUM)] public UInt16[] FanTach;
+        [MarshalAs(UnmanagedType.ByValArray, SizeConst = FAN_NUM)] public byte[] FanDuty;
     };
 
     public struct FanConfigStruct {
@@ -75,7 +86,7 @@ public class Device_EFC_X9_V1 : IDevice
         TEMP_SRC_TAMB
     };
 
-    public enum UART_CMD : byte {
+    private enum UART_CMD : byte {
         UART_CMD_WELCOME,
         UART_CMD_READ_ID,
         UART_CMD_RSVD1,
@@ -96,13 +107,13 @@ public class Device_EFC_X9_V1 : IDevice
         UART_CMD_NOP = 0xFF
     }
 
-    public static byte[] ToByteArray(UART_CMD uartCMD, int len = 0) {
+    private static byte[] ToByteArray(UART_CMD uartCMD, int len = 0) {
         byte[] returnArray = new byte[len + 1];
         returnArray[0] = (byte)uartCMD;
         return returnArray;
     }
 
-    public enum UART_NVM_CMD : byte {
+    private enum UART_NVM_CMD : byte {
         CONFIG_SAVE,
         CONFIG_LOAD,
         CONFIG_RESET
@@ -210,54 +221,108 @@ public class Device_EFC_X9_V1 : IDevice
         byte[] txBuffer = ToByteArray(UART_CMD.UART_CMD_READ_SENSOR_VALUES);
         byte[] rxBuffer;
 
-        // Get values from device
-        try {
-            SendCommand(txBuffer, out rxBuffer, 32);
-        } catch {
-            sensorValues = new List<Models.SensorValue>();
-            return false;
-        }
+        if(FirmwareVersion == 0x01) {
 
-        SensorStruct sensorStruct = new SensorStruct();
+            SensorStruct_V1 sensorStruct = new SensorStruct_V1();
 
-        // Prevent null possibility
-        sensorStruct.Ts = new short[TS_NUM];
-        sensorStruct.FanTach = new ushort[FAN_NUM];
+            // Prevent null possibility
+            sensorStruct.Ts = new short[TS_NUM];
+            sensorStruct.FanTach = new ushort[FAN_NUM];
 
-        // Convert byte array to struct
+            // Get struct size
+            int size = Marshal.SizeOf(sensorStruct);
 
-        int size = Marshal.SizeOf(sensorStruct);
-        IntPtr ptr = IntPtr.Zero;
-        try
-        {
-            ptr = Marshal.AllocHGlobal(size);
-
-            Marshal.Copy(rxBuffer, 0, ptr, size);
-
-            object? struct_obj = Marshal.PtrToStructure(ptr, typeof(SensorStruct));
-            if(struct_obj != null) {
-                sensorStruct = (SensorStruct)struct_obj;
+            // Get values from device
+            try {
+                SendCommand(txBuffer, out rxBuffer, size);
+            } catch {
+                sensorValues = new List<Models.SensorValue>();
+                return false;
             }
-        }
-        finally
-        {
-            Marshal.FreeHGlobal(ptr);
-        }
 
-        sensorValues = new List<Models.SensorValue>();
 
-        sensorValues.Add(new Models.SensorValue("TS1", "Thermistor 1", Enums.SensorType.Temperature, sensorStruct.Ts[0] / 10.0f));
-        sensorValues.Add(new Models.SensorValue("TS2", "Thermistor 2", Enums.SensorType.Temperature, sensorStruct.Ts[1] / 10.0f));
-        sensorValues.Add(new Models.SensorValue("Tamb", "Ambient Temperature", Enums.SensorType.Temperature, sensorStruct.Ts[1] / 10.0f));
-        sensorValues.Add(new Models.SensorValue("Hum", "Humidity", Enums.SensorType.Temperature, sensorStruct.Ts[1] / 10.0f));
-        sensorValues.Add(new Models.SensorValue("FEXT", "External fan duty", Enums.SensorType.Duty, sensorStruct.FanExt));
-        sensorValues.Add(new Models.SensorValue("Vin", "Fan Voltage", Enums.SensorType.Voltage, sensorStruct.Vin / 10.0f));
-        sensorValues.Add(new Models.SensorValue("Iin", "Fan Current", Enums.SensorType.Current, sensorStruct.Iin / 10.0f));
-        sensorValues.Add(new Models.SensorValue("Pin", "Fan Power", Enums.SensorType.Power, (sensorStruct.Vin * sensorStruct.Iin) / 100.0f));
+            // Convert byte array to struct
 
-        for (int fanId = 0; fanId < FAN_NUM; fanId++)
-        {
-            sensorValues.Add(new Models.SensorValue($"Fan{fanId + 1}", $"Fan Speed {fanId + 1}", Enums.SensorType.Revolutions, sensorStruct.FanTach[fanId]));
+            IntPtr ptr = IntPtr.Zero;
+            try {
+                ptr = Marshal.AllocHGlobal(size);
+
+                Marshal.Copy(rxBuffer, 0, ptr, size);
+
+                object? struct_obj = Marshal.PtrToStructure(ptr, typeof(SensorStruct_V1));
+                if(struct_obj != null) {
+                    sensorStruct = (SensorStruct_V1)struct_obj;
+                }
+            } finally {
+                Marshal.FreeHGlobal(ptr);
+            }
+
+            sensorValues = new List<Models.SensorValue>();
+
+            sensorValues.Add(new Models.SensorValue("TS1", "Thermistor 1", Enums.SensorType.Temperature, sensorStruct.Ts[0] / 10.0f));
+            sensorValues.Add(new Models.SensorValue("TS2", "Thermistor 2", Enums.SensorType.Temperature, sensorStruct.Ts[1] / 10.0f));
+            sensorValues.Add(new Models.SensorValue("Tamb", "Ambient Temperature", Enums.SensorType.Temperature, sensorStruct.Ts[1] / 10.0f));
+            sensorValues.Add(new Models.SensorValue("Hum", "Humidity", Enums.SensorType.Temperature, sensorStruct.Ts[1] / 10.0f));
+            sensorValues.Add(new Models.SensorValue("FEXT", "External fan duty", Enums.SensorType.Duty, sensorStruct.FanExt));
+            sensorValues.Add(new Models.SensorValue("Vin", "Fan Voltage", Enums.SensorType.Voltage, sensorStruct.Vin / 10.0f));
+            sensorValues.Add(new Models.SensorValue("Iin", "Fan Current", Enums.SensorType.Current, sensorStruct.Iin / 10.0f));
+            sensorValues.Add(new Models.SensorValue("Pin", "Fan Power", Enums.SensorType.Power, (sensorStruct.Vin * sensorStruct.Iin) / 100.0f));
+
+            for(int fanId = 0; fanId < FAN_NUM; fanId++) {
+                sensorValues.Add(new Models.SensorValue($"Fan{fanId + 1}", $"Fan Speed {fanId + 1}", Enums.SensorType.Revolutions, sensorStruct.FanTach[fanId]));
+            }
+        } else {
+            SensorStruct_V2 sensorStruct = new SensorStruct_V2();
+
+            // Prevent null possibility
+            sensorStruct.Ts = new short[TS_NUM];
+            sensorStruct.FanTach = new ushort[FAN_NUM];
+            sensorStruct.FanDuty = new byte[FAN_NUM];
+
+            // Get struct size
+            int size = Marshal.SizeOf(sensorStruct);
+
+            // Get values from device
+            try {
+                SendCommand(txBuffer, out rxBuffer, size);
+            } catch {
+                sensorValues = new List<Models.SensorValue>();
+                return false;
+            }
+
+            // Convert byte array to struct
+
+            IntPtr ptr = IntPtr.Zero;
+            try {
+                ptr = Marshal.AllocHGlobal(size);
+
+                Marshal.Copy(rxBuffer, 0, ptr, size);
+
+                object? struct_obj = Marshal.PtrToStructure(ptr, typeof(SensorStruct_V2));
+                if(struct_obj != null) {
+                    sensorStruct = (SensorStruct_V2)struct_obj;
+                }
+            } finally {
+                Marshal.FreeHGlobal(ptr);
+            }
+
+            sensorValues = new List<Models.SensorValue>();
+
+            sensorValues.Add(new Models.SensorValue("TS1", "Thermistor 1", Enums.SensorType.Temperature, sensorStruct.Ts[0] / 10.0f));
+            sensorValues.Add(new Models.SensorValue("TS2", "Thermistor 2", Enums.SensorType.Temperature, sensorStruct.Ts[1] / 10.0f));
+            sensorValues.Add(new Models.SensorValue("Tamb", "Ambient Temperature", Enums.SensorType.Temperature, sensorStruct.Ts[1] / 10.0f));
+            sensorValues.Add(new Models.SensorValue("Hum", "Humidity", Enums.SensorType.Temperature, sensorStruct.Ts[1] / 10.0f));
+            sensorValues.Add(new Models.SensorValue("FEXT", "External fan duty", Enums.SensorType.Duty, sensorStruct.FanExt));
+            sensorValues.Add(new Models.SensorValue("Vin", "Fan Voltage", Enums.SensorType.Voltage, sensorStruct.Vin / 10.0f));
+            sensorValues.Add(new Models.SensorValue("Iin", "Fan Current", Enums.SensorType.Current, sensorStruct.Iin / 10.0f));
+            sensorValues.Add(new Models.SensorValue("Pin", "Fan Power", Enums.SensorType.Power, (sensorStruct.Vin * sensorStruct.Iin) / 100.0f));
+
+            for(int fanId = 0; fanId < FAN_NUM; fanId++) {
+                sensorValues.Add(new Models.SensorValue($"Fan{fanId + 1}", $"Fan Speed {fanId + 1}", Enums.SensorType.Revolutions, sensorStruct.FanTach[fanId]));
+            }
+            for(int fanId = 0; fanId < FAN_NUM; fanId++) {
+                sensorValues.Add(new Models.SensorValue($"Fan{fanId + 1}", $"Fan Duty {fanId + 1}", Enums.SensorType.Duty, sensorStruct.FanDuty[fanId]));
+            }
         }
 
         return true;
@@ -329,7 +394,7 @@ public class Device_EFC_X9_V1 : IDevice
 
     public virtual bool SetConfigItems(DeviceConfigStruct deviceConfigStruct) {
 
-        // Firmware version 01 write config is bugged
+        // Firmware version 01 write config is bugged, so fail directly
         if(FirmwareVersion == 0x01) {
             return false;
         }
@@ -418,6 +483,26 @@ public class Device_EFC_X9_V1 : IDevice
 
         // Send framebuffer update command
         txBuffer = ToByteArray(UART_CMD.UART_CMD_DISPLAY_SW_UPDATE);
+        try {
+            SendCommand(txBuffer, out _, 0);
+        } catch {
+            return false;
+        }
+
+        return true;
+
+    }
+
+
+    #endregion
+
+    #region Device control
+
+    public virtual bool ResetDevice(bool enter_bootloader) {
+
+        byte[] txBuffer = ToByteArray(enter_bootloader ? UART_CMD.UART_CMD_BOOTLOADER : UART_CMD.UART_CMD_RESET);
+
+        // Send command to device
         try {
             SendCommand(txBuffer, out _, 0);
         } catch {
