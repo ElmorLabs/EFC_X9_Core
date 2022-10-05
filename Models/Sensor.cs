@@ -1,20 +1,27 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
+using EFC_Core.Annotations;
 using EFC_Lib;
 
 namespace EFC_Core.Models
 {
     public class Sensor : ISensor
     {
+        /// <summary>
+        /// Identifier properties for this sensor.
+        /// </summary>
         public string ShortName { get; }
         public string Name { get; }
-        public double Value { get; }
-        public SensorType Type { get; }
 
-        public event EventHandler<SensorValueChanged>? ValueChanged;
+        /// <summary>
+        /// Value of this sensor.
+        /// </summary>
+        public double Value { get; }
 
         public Sensor(string shortName, string name, SensorType type, double value)
         {
@@ -23,6 +30,11 @@ namespace EFC_Core.Models
             Type = type;
             Value = value;
         }
+
+        /// <summary>
+        /// Sensor type and display properties for this sensor.
+        /// </summary>
+        public SensorType Type { get; }
 
         public string Unit
         {
