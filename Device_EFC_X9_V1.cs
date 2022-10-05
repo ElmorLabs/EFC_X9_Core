@@ -1,7 +1,6 @@
-﻿using System;
-using System.IO.Ports;
+﻿using System.IO.Ports;
 using System.Runtime.InteropServices;
-using System.Text;
+using EFC_Core.Models;
 using EFC_Lib;
 
 namespace EFC_Core;
@@ -26,7 +25,7 @@ public class Device_EFC_X9_V1 : IDevice
         public byte VendorId;
         public byte ProductId;
         public byte FwVersion;
-    };
+    }
 
     public struct SensorStruct_V1 {
         [MarshalAs(UnmanagedType.ByValArray, SizeConst = TS_NUM)] public Int16[] Ts;
@@ -36,7 +35,7 @@ public class Device_EFC_X9_V1 : IDevice
         public UInt16 Vin;
         public UInt16 Iin;
         [MarshalAs(UnmanagedType.ByValArray, SizeConst = FAN_NUM)] public UInt16[] FanTach;
-    };
+    }
 
     public struct SensorStruct_V2 {
         [MarshalAs(UnmanagedType.ByValArray, SizeConst = TS_NUM)] public Int16[] Ts;
@@ -47,7 +46,7 @@ public class Device_EFC_X9_V1 : IDevice
         public UInt16 Iin;
         [MarshalAs(UnmanagedType.ByValArray, SizeConst = FAN_NUM)] public UInt16[] FanTach;
         [MarshalAs(UnmanagedType.ByValArray, SizeConst = FAN_NUM)] public byte[] FanDuty;
-    };
+    }
 
     public struct FanConfigStruct {
         public FAN_MODE FanMode;
@@ -58,13 +57,13 @@ public class Device_EFC_X9_V1 : IDevice
         public byte FixedDuty;
         public byte MinDuty;
         public byte MaxDuty;
-    };
+    }
 
     public struct DeviceConfigStruct {
         public UInt16 Crc;
         public byte ActiveFanProfileId;
         [MarshalAs(UnmanagedType.ByValArray, SizeConst = PROFILE_NUM)] public ProfileConfigStruct[] FanProfile;
-    };
+    }
 
     public struct ProfileConfigStruct {
         [MarshalAs(UnmanagedType.ByValArray, SizeConst = FAN_NUM)] public FanConfigStruct[] FanConfig;
@@ -77,14 +76,14 @@ public class Device_EFC_X9_V1 : IDevice
         FAN_MODE_TEMP_CONTROL,
         FAN_MODE_FIXED,
         FAN_MODE_EXT
-    };
+    }
 
     public enum TEMP_SRC : byte {
         TEMP_SRC_AUTO,
         TEMP_SRC_TS1,
         TEMP_SRC_TS2,
         TEMP_SRC_TAMB
-    };
+    }
 
     private enum UART_CMD : byte {
         UART_CMD_WELCOME,
@@ -124,10 +123,10 @@ public class Device_EFC_X9_V1 : IDevice
 
     #region Variables
 
-    public string Name { get; } = "EFC X9 V1";
+    public string Name => "EFC X9 V1";
     public Guid DeviceId { get; } = new("AE4A2B8E-492B-4310-AB73-E0CF701D4EAB");
     public DeviceStatus Status { get; private set; } = DeviceStatus.DISCONNECTED;
-    public int FirmwareVersion { get; private set; } = 0;
+    public int FirmwareVersion { get; private set; }
 
     private static readonly List<byte> RxData = new();
     private static SerialPort? _serialPort;
@@ -180,11 +179,9 @@ public class Device_EFC_X9_V1 : IDevice
             Status = DeviceStatus.CONNECTED;
             return true;
         }
-        else
-        {
-            Status = DeviceStatus.ERROR;
-            return false;
-        }
+
+        Status = DeviceStatus.ERROR;
+        return false;
     }
 
     public virtual bool Disconnect()
@@ -278,18 +275,18 @@ public class Device_EFC_X9_V1 : IDevice
 
             sensors = new()
             {
-                new Models.Sensor("TS1",  "Thermistor 1",        SensorType.Temperature, sensorStruct.Ts[0] / 10.0f),
-                new Models.Sensor("TS2",  "Thermistor 2",        SensorType.Temperature, sensorStruct.Ts[1] / 10.0f),
-                new Models.Sensor("Tamb", "Ambient Temperature", SensorType.Temperature, sensorStruct.Ts[1] / 10.0f),
-                new Models.Sensor("Hum",  "Humidity",            SensorType.Temperature, sensorStruct.Ts[1] / 10.0f),
-                new Models.Sensor("FEXT", "External fan duty",   SensorType.Duty,        sensorStruct.FanExt),
-                new Models.Sensor("Vin",  "Fan Voltage",         SensorType.Voltage,     sensorStruct.Vin / 10.0f),
-                new Models.Sensor("Iin",  "Fan Current",         SensorType.Current,     sensorStruct.Iin / 10.0f),
-                new Models.Sensor("Pin",  "Fan Power",           SensorType.Power,       (sensorStruct.Vin * sensorStruct.Iin) / 100.0f)
+                new Sensor("TS1",  "Thermistor 1",        SensorType.Temperature, sensorStruct.Ts[0] / 10.0f),
+                new Sensor("TS2",  "Thermistor 2",        SensorType.Temperature, sensorStruct.Ts[1] / 10.0f),
+                new Sensor("Tamb", "Ambient Temperature", SensorType.Temperature, sensorStruct.Ts[1] / 10.0f),
+                new Sensor("Hum",  "Humidity",            SensorType.Temperature, sensorStruct.Ts[1] / 10.0f),
+                new Sensor("FEXT", "External fan duty",   SensorType.Duty,        sensorStruct.FanExt),
+                new Sensor("Vin",  "Fan Voltage",         SensorType.Voltage,     sensorStruct.Vin / 10.0f),
+                new Sensor("Iin",  "Fan Current",         SensorType.Current,     sensorStruct.Iin / 10.0f),
+                new Sensor("Pin",  "Fan Power",           SensorType.Power,       (sensorStruct.Vin * sensorStruct.Iin) / 100.0f)
             };
 
             for(int fanId = 0; fanId < FAN_NUM; fanId++) {
-                sensors.Add(new Models.Sensor($"Fan{fanId + 1}", $"Fan Speed {fanId + 1}", SensorType.Revolutions, sensorStruct.FanTach[fanId]));
+                sensors.Add(new Sensor($"Fan{fanId + 1}", $"Fan Speed {fanId + 1}", SensorType.Revolutions, sensorStruct.FanTach[fanId]));
             }
         } else {
             SensorStruct_V2 sensorStruct = new()
@@ -329,22 +326,22 @@ public class Device_EFC_X9_V1 : IDevice
 
             sensors = new()
             {
-                new Models.Sensor("TS1",  "Thermistor 1",        SensorType.Temperature, sensorStruct.Ts[0] / 10.0f),
-                new Models.Sensor("TS2",  "Thermistor 2",        SensorType.Temperature, sensorStruct.Ts[1] / 10.0f),
-                new Models.Sensor("Tamb", "Ambient Temperature", SensorType.Temperature, sensorStruct.Ts[1] / 10.0f),
-                new Models.Sensor("Hum",  "Humidity",            SensorType.Temperature, sensorStruct.Ts[1] / 10.0f),
-                new Models.Sensor("FEXT", "External fan duty",   SensorType.Duty,        sensorStruct.FanExt),
-                new Models.Sensor("Vin",  "Fan Voltage",         SensorType.Voltage,     sensorStruct.Vin / 10.0f),
-                new Models.Sensor("Iin",  "Fan Current",         SensorType.Current,     sensorStruct.Iin / 10.0f),
-                new Models.Sensor("Pin",  "Fan Power",           SensorType.Power,       (sensorStruct.Vin * sensorStruct.Iin) / 100.0f)
+                new Sensor("TS1",  "Thermistor 1",        SensorType.Temperature, sensorStruct.Ts[0] / 10.0f),
+                new Sensor("TS2",  "Thermistor 2",        SensorType.Temperature, sensorStruct.Ts[1] / 10.0f),
+                new Sensor("Tamb", "Ambient Temperature", SensorType.Temperature, sensorStruct.Ts[1] / 10.0f),
+                new Sensor("Hum",  "Humidity",            SensorType.Temperature, sensorStruct.Ts[1] / 10.0f),
+                new Sensor("FEXT", "External fan duty",   SensorType.Duty,        sensorStruct.FanExt),
+                new Sensor("Vin",  "Fan Voltage",         SensorType.Voltage,     sensorStruct.Vin / 10.0f),
+                new Sensor("Iin",  "Fan Current",         SensorType.Current,     sensorStruct.Iin / 10.0f),
+                new Sensor("Pin",  "Fan Power",           SensorType.Power,       (sensorStruct.Vin * sensorStruct.Iin) / 100.0f)
             };
 
             for(int fanId = 0; fanId < FAN_NUM; fanId++) {
-                sensors.Add(new Models.Sensor($"Fan{fanId + 1}", $"Fan Speed {fanId + 1}", SensorType.Revolutions, sensorStruct.FanTach[fanId]));
+                sensors.Add(new Sensor($"Fan{fanId + 1}", $"Fan Speed {fanId + 1}", SensorType.Revolutions, sensorStruct.FanTach[fanId]));
             }
 
             for(int fanId = 0; fanId < FAN_NUM; fanId++) {
-                sensors.Add(new Models.Sensor($"Fan{fanId + 1}", $"Fan Duty {fanId + 1}", SensorType.Duty, sensorStruct.FanDuty[fanId]));
+                sensors.Add(new Sensor($"Fan{fanId + 1}", $"Fan Duty {fanId + 1}", SensorType.Duty, sensorStruct.FanDuty[fanId]));
             }
         }
 
