@@ -124,6 +124,8 @@ public class Device_EFC_X9_V1 : IDevice
 
     #region Variables
 
+    public string Name { get; } = "EFC X9 V1";
+    public Guid DeviceId { get; } = new("AE4A2B8E-492B-4310-AB73-E0CF701D4EAB");
     public DeviceStatus Status { get; private set; } = DeviceStatus.DISCONNECTED;
     public int FirmwareVersion { get; private set; } = 0;
 
