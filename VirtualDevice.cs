@@ -4,15 +4,14 @@ using System.IO.Ports;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using EFC_Lib;
 using static EFC_Core.Device_EFC_X9_V1;
-using static EFC_Core.Models;
 
 namespace EFC_Core
 {
     public class VirtualDevice : Device_EFC_X9_V1
     {
-        public new Enums.DeviceStatus Status { get; private set; } = Enums.DeviceStatus.DISCONNECTED;
-        public new Enums.HardwareType Type { get; private set; } = Enums.HardwareType.EFC_X9_V1;
+        public new DeviceStatus Status { get; private set; } = DeviceStatus.DISCONNECTED;
         public new int FirmwareVersion { get; private set; } = 0;
 
         Random rnd = new Random();
@@ -58,30 +57,31 @@ namespace EFC_Core
 
         public override bool Connect(string comPort)
         {
-            Status = Enums.DeviceStatus.CONNECTED;
+            Status = DeviceStatus.CONNECTED;
             return true;
         }
 
         public override bool Disconnect()
         {
-            Status = Enums.DeviceStatus.DISCONNECTED;
+            Status = DeviceStatus.DISCONNECTED;
             return true;
         }
 
-        public override bool GetSensorValues(out List<Models.SensorValue> sensorValues)
+        public override bool GetSensors(out List<ISensor> sensors)
         {
 
-            sensorValues = new List<Models.SensorValue>();
+            sensors = new()
+            {
+                new Models.Sensor("TS1", "Thermistor 1", SensorType.Temperature, (200 + rnd.Next(0, 200)) / 10.0f),
+                new Models.Sensor("TS2", "Thermistor 2", SensorType.Temperature, (200 + rnd.Next(0, 200)) / 10.0f),
+                new Models.Sensor("Tamb", "Ambient Temperature", SensorType.Temperature, (200 + rnd.Next(0, 20)) / 10.0f),
+                new Models.Sensor("Hum",  "Humidity",            SensorType.Temperature, (300 + rnd.Next(0, 300)) / 10.0f),
+                new Models.Sensor("FEXT", "External Fan Duty",   SensorType.Duty,        255)
+            };
 
-            sensorValues.Add(new Models.SensorValue("TS1", "Thermistor 1", Enums.SensorType.Temperature, (200 + rnd.Next(0, 200)) / 10.0f));
-            sensorValues.Add(new Models.SensorValue("TS2", "Thermistor 2", Enums.SensorType.Temperature, (200 + rnd.Next(0, 200)) / 10.0f));
-            sensorValues.Add(new Models.SensorValue("Tamb", "Ambient Temperature", Enums.SensorType.Temperature, (200 + rnd.Next(0, 20)) / 10.0f));
-            sensorValues.Add(new Models.SensorValue("Hum", "Humidity", Enums.SensorType.Temperature, (300 + rnd.Next(0, 300)) / 10.0f));
-            sensorValues.Add(new Models.SensorValue("FEXT", "External Fan Duty", Enums.SensorType.Duty, 255));
-            
             int sim_voltage = 118 + rnd.Next(0, 4);
 
-            sensorValues.Add(new Models.SensorValue("Vin", "Fan Voltage", Enums.SensorType.Voltage, (sim_voltage) / 10.0f));
+            sensors.Add(new Models.Sensor("Vin", "Fan Voltage", SensorType.Voltage, (sim_voltage) / 10.0f));
 
             int sim_current = rnd.Next(0, 2);
 
@@ -90,13 +90,13 @@ namespace EFC_Core
                 sim_current += fan_duties[fanId]/10;
             }
 
-            sensorValues.Add(new Models.SensorValue("Iin", "Fan Current", Enums.SensorType.Current, sim_current / 10.0f));
-            sensorValues.Add(new Models.SensorValue("Pin", "Fan Power", Enums.SensorType.Power, (sim_voltage * sim_current) / 100.0f));
+            sensors.Add(new Models.Sensor("Iin", "Fan Current", SensorType.Current, sim_current / 10.0f));
+            sensors.Add(new Models.Sensor("Pin", "Fan Power", SensorType.Power, (sim_voltage * sim_current) / 100.0f));
 
             for (int fanId = 0; fanId < Device_EFC_X9_V1.FAN_NUM; fanId++)
             {
                 int sim_duty = fan_duties[fanId] * 30 + rnd.Next(0, 2) * 60;
-                sensorValues.Add(new Models.SensorValue($"Fan{fanId + 1}", $"Fan Speed {fanId + 1}", Enums.SensorType.Revolutions, sim_duty));
+                sensors.Add(new Models.Sensor($"Fan{fanId + 1}", $"Fan Speed {fanId + 1}", SensorType.Revolutions, sim_duty));
             }
 
             return true;
