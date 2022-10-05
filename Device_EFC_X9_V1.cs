@@ -123,13 +123,33 @@ public class Device_EFC_X9_V1 : IDevice
 
     #region Variables
 
+    #region Identifiers
+
     public string Name => "EFC X9 V1";
     public Guid DeviceId { get; } = new("AE4A2B8E-492B-4310-AB73-E0CF701D4EAB");
+
+    #endregion
+
+    #region Device properties
+
+    public int FanCount => 9;
+    public bool EmbeddedControl => true;
+
+    #endregion
+
+    #region Status indicators
+
     public DeviceStatus Status { get; private set; } = DeviceStatus.DISCONNECTED;
     public int FirmwareVersion { get; private set; }
 
+    #endregion
+
+    #region Private variables
+
     private static readonly List<byte> RxData = new();
     private static SerialPort? _serialPort;
+
+    #endregion
 
     #endregion
 
@@ -137,7 +157,12 @@ public class Device_EFC_X9_V1 : IDevice
 
     #region Connection
 
-    public virtual bool Connect(string comPort = "COM34")
+    public virtual bool Connect()
+    {
+        return Connect("COM34");
+    }
+
+    public bool Connect(string comPort)
     {
         Status = DeviceStatus.CONNECTING;
 
@@ -210,7 +235,12 @@ public class Device_EFC_X9_V1 : IDevice
         return true;
     }
 
-    public virtual bool Reset(bool bootloaderMode = false)
+    public virtual bool Reset()
+    {
+        return Reset(false);
+    }
+
+    public bool Reset(bool bootloaderMode)
     {
 
         byte[] txBuffer = ToByteArray(bootloaderMode ? UART_CMD.UART_CMD_BOOTLOADER : UART_CMD.UART_CMD_RESET);
