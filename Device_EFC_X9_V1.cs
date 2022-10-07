@@ -126,7 +126,7 @@ public class Device_EFC_X9_V1 : IDevice
     #region Identifiers
 
     public string Name => "EFC X9 V1";
-    public Guid DeviceId { get; } = new("AE4A2B8E-492B-4310-AB73-E0CF701D4EAB");
+    public Guid Guid { get; } = new("AE4A2B8E-492B-4310-AB73-E0CF701D4EAB");
 
     #endregion
 
