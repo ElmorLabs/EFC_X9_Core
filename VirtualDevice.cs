@@ -4,7 +4,7 @@ using System.IO.Ports;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using EFC_Lib;
+using EFC_Lib.Classes;
 using static EFC_Core.Device_EFC_X9_V1;
 
 namespace EFC_Core
@@ -19,16 +19,19 @@ namespace EFC_Core
 
         private readonly DeviceConfigStruct _deviceConfigStruct;
 
-        public VirtualDevice() {
+        public VirtualDevice()
+        {
 
             _deviceConfigStruct = new DeviceConfigStruct();
             _deviceConfigStruct.FanProfile = new ProfileConfigStruct[PROFILE_NUM];
 
-            for(int profile = 0; profile < PROFILE_NUM; profile++) {
+            for (int profile = 0; profile < PROFILE_NUM; profile++)
+            {
 
                 _deviceConfigStruct.FanProfile[profile].FanConfig = new FanConfigStruct[FAN_NUM];
 
-                for(int fan = 0; fan < FAN_NUM; fan++) {
+                for (int fan = 0; fan < FAN_NUM; fan++)
+                {
 
                     _deviceConfigStruct.FanProfile[profile].FanConfig[fan].Temp = new short[FAN_CURVE_NUM_POINTS];
                     _deviceConfigStruct.FanProfile[profile].FanConfig[fan].Duty = new byte[FAN_CURVE_NUM_POINTS];
@@ -44,7 +47,8 @@ namespace EFC_Core
                     _deviceConfigStruct.FanProfile[profile].FanConfig[fan].MinDuty = 20;
                     _deviceConfigStruct.FanProfile[profile].FanConfig[fan].MaxDuty = 100;
 
-                    if(profile == 1) {
+                    if (profile == 1)
+                    {
                         _deviceConfigStruct.FanProfile[profile].FanConfig[fan].FanMode = FAN_MODE.FAN_MODE_FIXED;
                         _deviceConfigStruct.FanProfile[profile].FanConfig[fan].FixedDuty = 100;
                     }
@@ -54,7 +58,7 @@ namespace EFC_Core
 
         }
 
-        public override bool Connect()
+        public override bool Connect(string comPort = "COM34")
         {
             Status = DeviceStatus.CONNECTED;
             return true;
@@ -66,59 +70,57 @@ namespace EFC_Core
             return true;
         }
 
-        public override bool Reset()
+        public override bool Reset(bool bootloaderMode)
         {
             return true;
         }
 
-        public override bool GetSensors(out List<ISensor> sensors)
+        public override bool UpdateSensors()
         {
 
-            sensors = new List<ISensor>
-            {
-                new Models.Sensor("TS1", "Thermistor 1", SensorType.Temperature, (200 + _rnd.Next(0, 200)) / 10.0f),
-                new Models.Sensor("TS2", "Thermistor 2", SensorType.Temperature, (200 + _rnd.Next(0, 200)) / 10.0f),
-                new Models.Sensor("Tamb", "Ambient Temperature", SensorType.Temperature, (200 + _rnd.Next(0, 20)) / 10.0f),
-                new Models.Sensor("Hum",  "Humidity",            SensorType.Temperature, (300 + _rnd.Next(0, 300)) / 10.0f),
-                new Models.Sensor("FEXT", "External Fan Duty",   SensorType.Duty,        255)
-            };
+            Sensors.Temperature1 = (200 + _rnd.Next(0, 200)) / 10.0f;
+            Sensors.Temperature2 = (200 + _rnd.Next(0, 200)) / 10.0f;
+            Sensors.TemperatureAmbient = (200 + _rnd.Next(0, 20)) / 10.0f;
+            Sensors.Humidity = (300 + _rnd.Next(0, 300)) / 10.0f;
+            Sensors.ExternalFanDuty = 255;
 
             int sim_voltage = 118 + _rnd.Next(0, 4);
-
-            sensors.Add(new Models.Sensor("Vin", "Fan Voltage", SensorType.Voltage, (sim_voltage) / 10.0f));
+            Sensors.FanVoltage = sim_voltage / 10.0f;
 
             int sim_current = _rnd.Next(0, 2);
 
             for (int fanId = 0; fanId < FAN_NUM; fanId++)
             {
-                sim_current += _fanDuties[fanId]/10;
+                sim_current += _fanDuties[fanId] / 10;
             }
 
-            sensors.Add(new Models.Sensor("Iin", "Fan Current", SensorType.Current, sim_current / 10.0f));
-            sensors.Add(new Models.Sensor("Pin", "Fan Power", SensorType.Power, (sim_voltage * sim_current) / 100.0f));
+            Sensors.FanCurrent = sim_current / 10.0f;
+            Sensors.FanPower = sim_voltage * sim_current / 100.0f;
 
             for (int fanId = 0; fanId < FAN_NUM; fanId++)
             {
                 int sim_duty = _fanDuties[fanId] * 30 + _rnd.Next(0, 2) * 60;
-                sensors.Add(new Models.Sensor($"Fan{fanId + 1}", $"Fan Speed {fanId + 1}", SensorType.Revolutions, sim_duty));
+                Sensors.FanSpeeds[fanId] = sim_duty;
             }
 
             return true;
         }
 
-        public override bool GetConfigItems(out DeviceConfigStruct deviceConfigStruct) {
+        public override bool GetConfigItems(out DeviceConfigStruct deviceConfigStruct)
+        {
             deviceConfigStruct = _deviceConfigStruct;
             return true;
         }
 
         public override bool SetFanDuty(int fanId, int fanDuty)
         {
-            if(fanId < FAN_NUM)
+            if (fanId < FAN_NUM)
             {
-                if(fanDuty > 100)
+                if (fanDuty > 100)
                 {
                     fanDuty = 100;
-                } else if(fanDuty < 0)
+                }
+                else if (fanDuty < 0)
                 {
                     fanDuty = 0;
                 }
