@@ -4,7 +4,6 @@ using System.IO.Ports;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using EFC_Lib.Classes;
 using static EFC_Core.Device_EFC_X9_V1;
 
 namespace EFC_Core
