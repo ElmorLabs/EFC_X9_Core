@@ -311,8 +311,8 @@ public class Device_EFC_X9_V1 {
 
             Sensors.Temperature1 = sensorStruct.Ts[0] / 10.0f;
             Sensors.Temperature2 = sensorStruct.Ts[1] / 10.0f;
-            Sensors.TemperatureAmbient = sensorStruct.Ts[1] / 10.0f;
-            Sensors.Humidity = sensorStruct.Ts[1] / 10.0f;
+            Sensors.TemperatureAmbient = sensorStruct.Tamb / 10.0f;
+            Sensors.Humidity = sensorStruct.Hum / 10.0f;
             Sensors.ExternalFanDuty = sensorStruct.FanExt;
             Sensors.FanVoltage = sensorStruct.Vin / 10.0f;
             Sensors.FanCurrent = sensorStruct.Iin / 10.0f;
@@ -357,8 +357,8 @@ public class Device_EFC_X9_V1 {
 
             Sensors.Temperature1 = sensorStruct.Ts[0] / 10.0f;
             Sensors.Temperature2 = sensorStruct.Ts[1] / 10.0f;
-            Sensors.TemperatureAmbient = sensorStruct.Ts[1] / 10.0f;
-            Sensors.Humidity = sensorStruct.Ts[1] / 10.0f;
+            Sensors.TemperatureAmbient = sensorStruct.Tamb / 10.0f;
+            Sensors.Humidity = sensorStruct.Hum / 10.0f;
             Sensors.ExternalFanDuty = sensorStruct.FanExt;
             Sensors.FanVoltage = sensorStruct.Vin / 10.0f;
             Sensors.FanCurrent = sensorStruct.Iin / 10.0f;
