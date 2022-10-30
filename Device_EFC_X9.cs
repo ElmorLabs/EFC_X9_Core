@@ -132,6 +132,7 @@ public class Device_EFC_X9 {
 
     public DeviceStatus Status { get; private set; } = DeviceStatus.DISCONNECTED;
     public int Version { get; private set; }
+    public string Port { get; private set; } = String.Empty;
 
     #endregion
 
@@ -155,6 +156,8 @@ public class Device_EFC_X9 {
     #region Connection
 
     public virtual bool Connect(string comPort = "COM34") {
+
+        Port = comPort;
         Status = DeviceStatus.CONNECTING;
 
         try {
@@ -369,9 +372,9 @@ public class Device_EFC_X9 {
             Sensors.TemperatureAmbient = sensorStruct.Tamb / 10.0f;
             Sensors.Humidity = sensorStruct.Hum / 10.0f;
             Sensors.ExternalFanDuty = sensorStruct.FanExt;
-            Sensors.FanVoltage = sensorStruct.Vin / 10.0f;
+            Sensors.FanVoltage = sensorStruct.Vin / 100.0f;
             Sensors.FanCurrent = sensorStruct.Iin / 10.0f;
-            Sensors.FanPower = sensorStruct.Vin * sensorStruct.Iin / 100.0f;
+            Sensors.FanPower = sensorStruct.Vin * sensorStruct.Iin / 1000.0f;
 
             for(int fanId = 0; fanId < FAN_NUM; fanId++) {
                 Sensors.FanSpeeds[fanId] = sensorStruct.FanTach[fanId];
