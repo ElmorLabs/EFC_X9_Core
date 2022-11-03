@@ -174,14 +174,19 @@ public class Device_EFC_X9 {
             };
 
             _serialPort.DataReceived += SerialPortOnDataReceived;
-        } catch {
+        } catch ( Exception e ) {
+            Console.WriteLine($"Error creating a connection to port: {comPort}");
+            Console.WriteLine($"Error reason: {e.Message}");
             Status = DeviceStatus.ERROR;
             return false;
         }
 
         try {
             _serialPort.Open();
-        } catch {
+            Console.WriteLine($"Connected to {comPort}");
+        } catch (Exception e) {
+            Console.WriteLine($"Error opening port: {comPort}");
+            Console.WriteLine($"Error reason: {e.Message}");
             Status = DeviceStatus.ERROR;
             return false;
         }
@@ -243,32 +248,7 @@ public class Device_EFC_X9 {
 
         deviceList = new List<Device_EFC_X9>();
 
-        List<string> ports = new List<string>();
-
-        // Open registry to find matching CH340 USB-Serial ports
-        RegistryKey? regKey = null;
-
-        try {
-            regKey = Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Enum\USB\VID_1A86&PID_7523");
-        } catch {
-            return;
-        }
-
-        foreach(string subKey in regKey.GetSubKeyNames()) {
-            // Name must contain either VCP or Seial to be valid. Process any entries NOT matching
-            // Compare to subKey (name of RegKey entry)
-            try {
-                RegistryKey? _regKey = regKey.OpenSubKey($"{subKey}\\Device Parameters");
-                string? value = (string?)_regKey.GetValue("PortName");
-                if(_regKey.GetValueKind("PortName") == RegistryValueKind.String) {
-                    ports.Add(value);
-                }
-            } catch {
-
-            }
-        }
-
-        regKey.Close();
+        List<string> ports = GetEfcPorts();
 
         // Connect to first available device
         foreach(string port in ports) {
@@ -278,6 +258,80 @@ public class Device_EFC_X9 {
             }
         }
 
+    }
+
+    private static List<string> GetEfcPorts()
+    {
+        List<string> ports = new();
+
+        if (OperatingSystem.IsWindows())
+        {
+            // Open registry to find matching CH340 USB-Serial ports
+            RegistryKey? masterRegKey = null;
+
+            try
+            {
+                masterRegKey = Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Enum\USB\VID_1A86&PID_7523");
+            }
+            catch
+            {
+                return ports;
+            }
+
+            if (masterRegKey == null) return ports;
+            foreach (string subKey in masterRegKey.GetSubKeyNames())
+            {
+                // Name must contain either VCP or Serial to be valid. Process any entries NOT matching
+                // Compare to subKey (name of RegKey entry)
+                try
+                {
+                    RegistryKey? subRegKey = masterRegKey.OpenSubKey($"{subKey}\\Device Parameters");
+                    if (subRegKey == null) continue;
+
+                    string? value = (string?)subRegKey.GetValue("PortName");
+
+                    if (subRegKey.GetValueKind("PortName") != RegistryValueKind.String) continue;
+
+                    if (value != null) ports.Add(value);
+                }
+                catch
+                {
+                    continue;
+                }
+            }
+
+            masterRegKey.Close();
+        }
+
+        else if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
+        {
+            try
+            {
+                string[] ttyList = Directory.GetDirectories("/sys/bus/usb-serial/devices/");
+
+                foreach (string portFile in ttyList)
+                {
+                    string realPortFile = Mono.Unix.UnixPath.GetRealPath(portFile);
+                    string checkPath = Path.GetFullPath(Path.Combine(realPortFile, "../uevent"));
+                    string[] lines = File.ReadAllLines(checkPath);
+                    string productLine = lines.First(l => l.StartsWith("PRODUCT="));
+                    string[] productSplit = productLine.Remove(0, 8).Trim().Split('/');
+
+                    if (productSplit[0] == "1a86" && productSplit[1] == "7523")
+                    {
+                        string portDevPath = Path.Combine("/dev/", Path.GetFileName(portFile));
+                        ports.Add(portDevPath);
+                        Console.WriteLine($"Adding port: {portDevPath}");
+                    }
+                }
+            }
+            catch
+            {
+                return ports;
+            }
+        }
+        
+        return ports;
     }
 
     #endregion
