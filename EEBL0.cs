@@ -26,8 +26,8 @@ namespace EFC_Core {
             return returnArray;
         }
 
-        private static readonly List<byte> RxData = new();
-        private static SerialPort? _serialPort;
+        private readonly List<byte> RxData = new();
+        private SerialPort? _serialPort;
 
         #region Connection
 

@@ -138,8 +138,8 @@ public class Device_EFC_X9 {
 
     #region Private variables
 
-    private static readonly List<byte> RxData = new();
-    private static SerialPort? _serialPort;
+    private readonly List<byte> RxData = new();
+    private SerialPort? _serialPort;
 
     #endregion
 
@@ -148,10 +148,6 @@ public class Device_EFC_X9 {
     #endregion
 
     #region Public Methods
-
-    public void Update() {
-        UpdateSensors();
-    }
 
     #region Connection
 
@@ -175,18 +171,18 @@ public class Device_EFC_X9 {
 
             _serialPort.DataReceived += SerialPortOnDataReceived;
         } catch ( Exception e ) {
-            Console.WriteLine($"Error creating a connection to port: {comPort}");
-            Console.WriteLine($"Error reason: {e.Message}");
+            //Console.WriteLine($"Error creating a connection to port: {comPort}");
+            //Console.WriteLine($"Error reason: {e.Message}");
             Status = DeviceStatus.ERROR;
             return false;
         }
 
         try {
             _serialPort.Open();
-            Console.WriteLine($"Connected to {comPort}");
+            //Console.WriteLine($"Connected to {comPort}");
         } catch (Exception e) {
-            Console.WriteLine($"Error opening port: {comPort}");
-            Console.WriteLine($"Error reason: {e.Message}");
+            //Console.WriteLine($"Error opening port: {comPort}");
+            //Console.WriteLine($"Error reason: {e.Message}");
             Status = DeviceStatus.ERROR;
             return false;
         }
@@ -206,6 +202,8 @@ public class Device_EFC_X9 {
         } else {
             Status = DeviceStatus.ERROR;
         }
+
+        _serialPort.DiscardInBuffer();
 
         return connected;
     }
@@ -321,7 +319,7 @@ public class Device_EFC_X9 {
                     {
                         string portDevPath = Path.Combine("/dev/", Path.GetFileName(portFile));
                         ports.Add(portDevPath);
-                        Console.WriteLine($"Adding port: {portDevPath}");
+                        //Console.WriteLine($"Adding port: {portDevPath}");
                     }
                 }
             }
@@ -355,8 +353,11 @@ public class Device_EFC_X9 {
 
             // Get values from device
             try {
-                SendCommand(txBuffer, out rxBuffer, size);
-            } catch {
+                bool commandResult = SendCommand(txBuffer, out rxBuffer, size);
+                if (!commandResult) return false;
+            } catch
+            {
+                //throw;
                 return false;
             }
 
@@ -400,8 +401,11 @@ public class Device_EFC_X9 {
 
             // Get values from device
             try {
-                SendCommand(txBuffer, out rxBuffer, size);
-            } catch {
+                bool commandResult = SendCommand(txBuffer, out rxBuffer, size);
+                if (!commandResult) return false;
+            } catch
+            {
+                //throw;
                 return false;
             }
 
@@ -645,11 +649,14 @@ public class Device_EFC_X9 {
 
     // Send command to EFC-X9
     private bool SendCommand(byte[] txBuffer, out byte[] rxBuffer, int rxLen) {
+        if (_serialPort == null) throw new Exception("Serial port has not been initialized!"); //return false;
+
+        if (!_serialPort.IsOpen) _serialPort.Open();
+
         rxBuffer = new byte[rxLen];
 
-        if(_serialPort == null) return false;
-
-        try {
+        try
+        {
             RxData.Clear();
             _serialPort.Write(txBuffer, 0, txBuffer.Length);
             int timeout = 50;
@@ -658,15 +665,19 @@ public class Device_EFC_X9 {
                 Thread.Sleep(10);
             }
 
-            if(RxData.Count != rxBuffer.Length) {
+            if(RxData.Count != rxBuffer.Length)
+            {
+                //throw new Exception($"Buffer size mismatch! Expected {rxLen}, got {RxData.Count}");
                 return false;
             }
 
             rxBuffer = RxData.ToArray();
-        } catch {
+        } catch
+        {
+            //throw;
             return false;
         }
-
+        
         return true;
     }
 
