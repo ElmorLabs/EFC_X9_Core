@@ -610,7 +610,7 @@ public class Device_EFC_X9 {
 
     public virtual bool OledFbSetPixel(int x, int y, bool value)
     {
-        if (x >= 128 || y >= 64)
+        if (x < 0 || x >= 128 || y < 0 || y >= 64)
         {
             return false;
         }
