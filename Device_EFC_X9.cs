@@ -140,6 +140,7 @@ public class Device_EFC_X9 {
 
     private readonly List<byte> RxData = new();
     private SerialPort? _serialPort;
+    private byte[] oled_fb = new byte[128 * 64 / 8];
 
     #endregion
 
@@ -607,6 +608,38 @@ public class Device_EFC_X9 {
 
     }
 
+    public virtual bool OledFbSetPixel(int x, int y, bool value)
+    {
+        if (x >= 128 || y >= 64)
+        {
+            return false;
+        }
+
+        int col = x;
+        int row = y / 8;
+
+        if (value)
+        {
+            oled_fb[128 * row + col] |= (byte)(1 << (y - row * 8));
+        }
+        else
+        {
+            oled_fb[128 * row + col] &= (byte)~(1 << (y - row * 8));
+        }
+
+        return true;
+    }
+
+    public virtual bool OledFbClear()
+    {
+        oled_fb = new byte[128 * 64 / 8];
+        return true;
+    }
+
+    public virtual bool OledFbFlush()
+    {
+        return SendOledFramebuffer(oled_fb);
+    }
 
     #endregion
 
