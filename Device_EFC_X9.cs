@@ -427,16 +427,16 @@ public class Device_EFC_X9 {
                 Marshal.FreeHGlobal(ptr);
             }
 
-            Sensors.Temperature1 = sensorStruct.Ts[0] / 10.0f;
-            Sensors.Temperature2 = sensorStruct.Ts[1] / 10.0f;
-            Sensors.TemperatureAmbient = sensorStruct.Tamb / 10.0f;
-            Sensors.Humidity = sensorStruct.Hum / 10.0f;
-            Sensors.ExternalFanDuty = sensorStruct.FanExt;
-            Sensors.FanVoltage = sensorStruct.Vin / 100.0f;
-            Sensors.FanCurrent = sensorStruct.Iin / 10.0f;
-            Sensors.FanPower = sensorStruct.Vin * sensorStruct.Iin / 1000.0f;
+            Sensors.Temperature1 = sensorStruct.Ts[0] == 0x7FFF ? null : sensorStruct.Ts[0] / 10.0f;
+            Sensors.Temperature2 = sensorStruct.Ts[1] == 0x7FFF ? null : sensorStruct.Ts[1] / 10.0f;
+            Sensors.TemperatureAmbient = sensorStruct.Tamb == 0x7FFF ? null : sensorStruct.Tamb / 10.0f;
+            Sensors.Humidity = sensorStruct.Hum == 0x7FFF ? null : sensorStruct.Hum / 10.0f;
+            Sensors.ExternalFanDuty = sensorStruct.FanExt == 0xFF ? null : sensorStruct.FanExt;
+            Sensors.FanVoltage = sensorStruct.Vin == 0x7FFF ? null : sensorStruct.Vin / 100.0f;
+            Sensors.FanCurrent = sensorStruct.Iin == 0x7FFF ? null : sensorStruct.Iin / 10.0f;
+            Sensors.FanPower = Sensors.FanVoltage == null || Sensors.FanCurrent == null ? null : sensorStruct.Vin * sensorStruct.Iin / 1000.0f;
 
-            for(int fanId = 0; fanId < FAN_NUM; fanId++) {
+            for (int fanId = 0; fanId < FAN_NUM; fanId++) {
                 Sensors.FanSpeeds[fanId] = sensorStruct.FanTach[fanId];
             }
 
