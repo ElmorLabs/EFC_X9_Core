@@ -35,8 +35,21 @@ public class Device_EFC_X9 {
         [MarshalAs(UnmanagedType.ByValArray, SizeConst = FAN_NUM)] public ushort[] FanTach;
     }
 
-    public struct SensorStruct_V2 {
+    public struct SensorStruct_V2
+    {
         [MarshalAs(UnmanagedType.ByValArray, SizeConst = TS_NUM)] public short[] Ts;
+        public short Tamb;
+        public short Hum;
+        public byte FanExt;
+        public ushort Vin;
+        public ushort Iin;
+        [MarshalAs(UnmanagedType.ByValArray, SizeConst = FAN_NUM)] public ushort[] FanTach;
+        [MarshalAs(UnmanagedType.ByValArray, SizeConst = FAN_NUM)] public byte[] FanDuty;
+    }
+    public struct SensorStruct_V3
+    {
+        [MarshalAs(UnmanagedType.ByValArray, SizeConst = TS_NUM)] public short[] Ts;
+        [MarshalAs(UnmanagedType.ByValArray, SizeConst = TS_NUM)] public short[] TsA;
         public short Tamb;
         public short Hum;
         public byte FanExt;
@@ -376,7 +389,7 @@ public class Device_EFC_X9 {
             } finally {
                 Marshal.FreeHGlobal(ptr);
             }
-
+            
             Sensors.Temperature1 = sensorStruct.Ts[0] == 0x7FFF ? null : sensorStruct.Ts[0] / 10.0f;
             Sensors.Temperature2 = sensorStruct.Ts[1] == 0x7FFF ? null : sensorStruct.Ts[1] / 10.0f;
             Sensors.TemperatureAmbient = sensorStruct.Tamb == 0x7FFF ? null : sensorStruct.Tamb / 10.0f;
@@ -390,8 +403,11 @@ public class Device_EFC_X9 {
                 Sensors.FanSpeeds[fanId] = sensorStruct.FanTach[fanId];
             }
 
-        } else {
-            SensorStruct_V2 sensorStruct = new() {
+        }
+        else if (Version <= 0x07)
+        {
+            SensorStruct_V2 sensorStruct = new()
+            {
                 // Prevent null possibility
                 Ts = new short[TS_NUM],
                 FanTach = new ushort[FAN_NUM],
@@ -402,10 +418,12 @@ public class Device_EFC_X9 {
             int size = Marshal.SizeOf(sensorStruct);
 
             // Get values from device
-            try {
+            try
+            {
                 bool commandResult = SendCommand(txBuffer, out rxBuffer, size);
                 if (!commandResult) return false;
-            } catch
+            }
+            catch
             {
                 //throw;
                 return false;
@@ -414,16 +432,20 @@ public class Device_EFC_X9 {
             // Convert byte array to struct
 
             IntPtr ptr = IntPtr.Zero;
-            try {
+            try
+            {
                 ptr = Marshal.AllocHGlobal(size);
 
                 Marshal.Copy(rxBuffer, 0, ptr, size);
 
                 object? structObj = Marshal.PtrToStructure(ptr, typeof(SensorStruct_V2));
-                if(structObj != null) {
+                if (structObj != null)
+                {
                     sensorStruct = (SensorStruct_V2)structObj;
                 }
-            } finally {
+            }
+            finally
+            {
                 Marshal.FreeHGlobal(ptr);
             }
 
@@ -436,11 +458,80 @@ public class Device_EFC_X9 {
             Sensors.FanCurrent = sensorStruct.Iin == 0x7FFF ? null : sensorStruct.Iin / 10.0f;
             Sensors.FanPower = Sensors.FanVoltage == null || Sensors.FanCurrent == null ? null : sensorStruct.Vin * sensorStruct.Iin / 1000.0f;
 
-            for (int fanId = 0; fanId < FAN_NUM; fanId++) {
+            for (int fanId = 0; fanId < FAN_NUM; fanId++)
+            {
                 Sensors.FanSpeeds[fanId] = sensorStruct.FanTach[fanId];
             }
 
-            for(int fanId = 0; fanId < FAN_NUM; fanId++) {
+            for (int fanId = 0; fanId < FAN_NUM; fanId++)
+            {
+                Sensors.FanDuties[fanId] = sensorStruct.FanDuty[fanId];
+            }
+        } 
+        else 
+        {
+            SensorStruct_V3 sensorStruct = new()
+            {
+                // Prevent null possibility
+                Ts = new short[TS_NUM],
+                TsA = new short[TS_NUM],
+                FanTach = new ushort[FAN_NUM],
+                FanDuty = new byte[FAN_NUM]
+            };
+
+            // Get struct size
+            int size = Marshal.SizeOf(sensorStruct);
+
+            // Get values from device
+            try
+            {
+                bool commandResult = SendCommand(txBuffer, out rxBuffer, size);
+                if (!commandResult) return false;
+            }
+            catch
+            {
+                //throw;
+                return false;
+            }
+
+            // Convert byte array to struct
+
+            IntPtr ptr = IntPtr.Zero;
+            try
+            {
+                ptr = Marshal.AllocHGlobal(size);
+
+                Marshal.Copy(rxBuffer, 0, ptr, size);
+
+                object? structObj = Marshal.PtrToStructure(ptr, typeof(SensorStruct_V3));
+                if (structObj != null)
+                {
+                    sensorStruct = (SensorStruct_V3)structObj;
+                }
+            }
+            finally
+            {
+                Marshal.FreeHGlobal(ptr);
+            }
+
+            Sensors.Temperature1 = sensorStruct.Ts[0] == 0x7FFF ? null : sensorStruct.Ts[0] / 10.0f;
+            Sensors.Temperature2 = sensorStruct.Ts[1] == 0x7FFF ? null : sensorStruct.Ts[1] / 10.0f;
+            Sensors.Temperature1AboveAmbient = sensorStruct.TsA[0] == 0x7FFF ? null : sensorStruct.TsA[0] / 10.0f;
+            Sensors.Temperature2AboveAmbient = sensorStruct.TsA[1] == 0x7FFF ? null : sensorStruct.TsA[1] / 10.0f;
+            Sensors.TemperatureAmbient = sensorStruct.Tamb == 0x7FFF ? null : sensorStruct.Tamb / 10.0f;
+            Sensors.Humidity = sensorStruct.Hum == 0x7FFF ? null : sensorStruct.Hum / 10.0f;
+            Sensors.ExternalFanDuty = sensorStruct.FanExt == 0xFF ? null : sensorStruct.FanExt;
+            Sensors.FanVoltage = sensorStruct.Vin == 0x7FFF ? null : sensorStruct.Vin / 100.0f;
+            Sensors.FanCurrent = sensorStruct.Iin == 0x7FFF ? null : sensorStruct.Iin / 10.0f;
+            Sensors.FanPower = Sensors.FanVoltage == null || Sensors.FanCurrent == null ? null : sensorStruct.Vin * sensorStruct.Iin / 1000.0f;
+
+            for (int fanId = 0; fanId < FAN_NUM; fanId++)
+            {
+                Sensors.FanSpeeds[fanId] = sensorStruct.FanTach[fanId];
+            }
+
+            for (int fanId = 0; fanId < FAN_NUM; fanId++)
+            {
                 Sensors.FanDuties[fanId] = sensorStruct.FanDuty[fanId];
             }
         }

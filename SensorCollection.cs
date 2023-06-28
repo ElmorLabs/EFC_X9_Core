@@ -10,6 +10,8 @@ namespace EFC_Core
     {
         public double? Temperature1;
         public double? Temperature2;
+        public double? Temperature1AboveAmbient;
+        public double? Temperature2AboveAmbient;
         public double? TemperatureAmbient;
         public double? Humidity;
         public double? ExternalFanDuty;
