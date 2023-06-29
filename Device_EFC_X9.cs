@@ -93,6 +93,8 @@ public class Device_EFC_X9 {
         TEMP_SRC_AUTO,
         TEMP_SRC_TS1,
         TEMP_SRC_TS2,
+        TEMP_SRC_TS1A,
+        TEMP_SRC_TS2A,
         TEMP_SRC_TAMB
     }
 
