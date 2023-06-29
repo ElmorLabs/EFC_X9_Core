@@ -183,7 +183,6 @@ public class Device_EFC_X9 {
                 DtrEnable = true
             };
 
-            _serialPort.DataReceived += SerialPortOnDataReceived;
         } catch ( Exception e ) {
             //Console.WriteLine($"Error creating a connection to port: {comPort}");
             //Console.WriteLine($"Error reason: {e.Message}");
@@ -193,6 +192,7 @@ public class Device_EFC_X9 {
 
         try {
             _serialPort.Open();
+            _serialPort.DataReceived += SerialPortOnDataReceived;
             //Console.WriteLine($"Connected to {comPort}");
         } catch (Exception e) {
             //Console.WriteLine($"Error opening port: {comPort}");
@@ -226,7 +226,11 @@ public class Device_EFC_X9 {
         Status = DeviceStatus.DISCONNECTING;
 
         if(_serialPort != null) {
-            try {
+            try
+            {
+                _serialPort.DataReceived -= SerialPortOnDataReceived;
+                _serialPort.DiscardInBuffer();
+                _serialPort.Close();
                 _serialPort.Dispose();
                 _serialPort = null;
             } catch {
@@ -268,6 +272,7 @@ public class Device_EFC_X9 {
             if(temp_device.Connect(port)) {
                 deviceList.Add(temp_device);
             }
+            //temp_device.Disconnect();
         }
 
     }
@@ -344,6 +349,55 @@ public class Device_EFC_X9 {
         }
         
         return ports;
+    }
+
+    public SerialPort? BorrowSerialPort()
+    {
+        if (_serialPort != null)
+        {
+            _serialPort.DataReceived -= SerialPortOnDataReceived;
+        }
+        return _serialPort;
+    }
+
+    public void ReturnSerialPort()
+    {
+        if (_serialPort != null)
+        {
+            _serialPort.DataReceived += SerialPortOnDataReceived;
+        }
+    }
+
+    public bool Refresh()
+    {
+
+        bool connected = CheckVendorData();
+
+        if (connected)
+        {
+
+            if (Version > 2)
+            {
+                // Update UID
+                connected = UpdateUID();
+            }
+        }
+
+        if (connected)
+        {
+            Status = DeviceStatus.CONNECTED;
+        }
+        else
+        {
+            Status = DeviceStatus.ERROR;
+        }
+
+        if (_serialPort != null)
+        {
+            _serialPort.DiscardInBuffer();
+        }
+
+        return connected;
     }
 
     #endregion

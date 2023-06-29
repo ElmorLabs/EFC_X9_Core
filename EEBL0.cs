@@ -31,10 +31,13 @@ namespace EFC_Core {
 
         #region Connection
 
-        public virtual bool Connect(string comPort = "COM34") {
+        public virtual bool Connect(string comPort = "COM34")
+        {
 
-            try {
-                _serialPort = new SerialPort(comPort) {
+            try
+            {
+                _serialPort = new SerialPort(comPort)
+                {
                     BaudRate = 115200,
                     Parity = Parity.None,
                     DataBits = 8,
@@ -46,38 +49,87 @@ namespace EFC_Core {
                     DtrEnable = true
                 };
 
-                _serialPort.DataReceived += SerialPortOnDataReceived;
-            } catch {
+            }
+            catch
+            {
                 return false;
             }
 
-            try {
+            try
+            {
                 _serialPort.Open();
-            } catch {
+                _serialPort.DataReceived += SerialPortOnDataReceived;
+            }
+            catch
+            {
                 return false;
             }
 
-            if(CheckWelcomeString()) {
+            if (CheckWelcomeString())
+            {
                 return true;
-            } else {
+            }
+            else
+            {
                 return false;
             }
         }
 
-        public virtual bool Disconnect() {
+        public virtual bool Connect(SerialPort? borrowedSerialPort)
+        {
+            _serialPort = borrowedSerialPort;
 
-            if(_serialPort != null) {
-                try {
+            try
+            {
+                _serialPort.DataReceived += SerialPortOnDataReceived;
+            }
+            catch
+            {
+                return false;
+            }
+
+            if (CheckWelcomeString())
+            {
+                return true;
+            }
+            else
+            {
+                ReturnSerialPort();
+                return false;
+            }
+        }
+
+        public virtual bool Disconnect()
+        {
+
+            if (_serialPort != null)
+            {
+                try
+                {
+                    _serialPort.DataReceived -= SerialPortOnDataReceived;
+                    _serialPort.Close();
                     _serialPort.Dispose();
                     _serialPort = null;
-                } catch {
+                }
+                catch
+                {
                     return false;
                 }
-            } else {
+            }
+            else
+            {
                 return false;
             }
 
             return true;
+        }
+
+        public void ReturnSerialPort()
+        {
+            if (_serialPort != null)
+            {
+                _serialPort.DataReceived -= SerialPortOnDataReceived;
+            }
         }
 
         #endregion
