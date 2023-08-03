@@ -186,8 +186,6 @@ public class Device_EFC_X9 {
             };
 
         } catch ( Exception e ) {
-            //Console.WriteLine($"Error creating a connection to port: {comPort}");
-            //Console.WriteLine($"Error reason: {e.Message}");
             Status = DeviceStatus.ERROR;
             return false;
         }
@@ -195,10 +193,7 @@ public class Device_EFC_X9 {
         try {
             _serialPort.Open();
             _serialPort.DataReceived += SerialPortOnDataReceived;
-            //Console.WriteLine($"Connected to {comPort}");
         } catch (Exception e) {
-            //Console.WriteLine($"Error opening port: {comPort}");
-            //Console.WriteLine($"Error reason: {e.Message}");
             Status = DeviceStatus.ERROR;
             return false;
         }
@@ -340,7 +335,6 @@ public class Device_EFC_X9 {
                     {
                         string portDevPath = Path.Combine("/dev/", Path.GetFileName(portFile));
                         ports.Add(portDevPath);
-                        //Console.WriteLine($"Adding port: {portDevPath}");
                     }
                 }
             }
