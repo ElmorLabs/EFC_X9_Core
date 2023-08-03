@@ -18,7 +18,8 @@ namespace EFC_Core {
             UART_CMD_RUN_APP = (byte)'a',
             UART_CMD_ERASE = (byte)'e',
             UART_CMD_PROGRAM_PAGE = (byte)'p',
-            UART_CMD_VERIFY_PAGE = (byte)'v'
+            UART_CMD_VERIFY_PAGE = (byte)'v',
+            UART_CMD_RESET = (byte)'r'
         }
         private static byte[] ToByteArray(UART_CMD uartCMD, int len = 0) {
             byte[] returnArray = new byte[len + 1];
@@ -213,6 +214,18 @@ namespace EFC_Core {
 
             return true;
 
+        }
+
+        public virtual bool Reset() {
+            byte[] txBuffer = ToByteArray(UART_CMD.UART_CMD_RESET);
+            try
+            {
+                SendCommand(txBuffer, out _, 0);
+            } catch
+            {
+                return false;
+            }
+            return true;
         }
 
         public virtual bool RunApplication() {
